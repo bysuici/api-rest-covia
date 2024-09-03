@@ -15,5 +15,5 @@ app.use(router)
 
 // Configurar puerto
 app.listen(port, () => {
-    console.log(`Listen on port 3000`)
+    console.log(`Listen on port ${port}`)
 })
