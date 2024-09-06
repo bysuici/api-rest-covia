@@ -6,8 +6,8 @@ const app = express()
 const port = 3000
 
 // Configuracion del servicio
-app.use(urlencoded({ extended: true }))
-app.use(json())
+app.use(urlencoded({ extended: true, limit: '100mb' }))
+app.use(json({ limit: '100mb' }))
 app.use(cors())
 
 // Routers
