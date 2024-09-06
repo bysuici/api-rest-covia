@@ -5,17 +5,13 @@ export const pdfGenerator = async (coords, events, summary) => {
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {
         format: 'A4',
-        displayHeaderFooter: true,
+        displayHeaderFooter: false,
         headerTemplate: `
             <div style="font-size: 12px; width: 100%; padding: 20px 65px; color: #333;">
-                <span>OKIP</span>
+                <b>OKIP</b>
             </div>
         `,
-        footerTemplate: `
-            <div style="font-size: 12px; width: 100%; padding: 20px 65px; color: #333;">
-                <span class="totalPages"></span>
-            </div>
-        `,
+        footerTemplate: '',
         margin: {
             top: '60px',
             bottom: '60px',
