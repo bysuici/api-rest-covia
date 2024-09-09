@@ -1,7 +1,7 @@
 import axios from 'axios'
 import dotenv from 'dotenv'
 
-export const getEvents = async (devices, from, to) => {
+export const getEvents = async (devices, from, to, token) => {
     let strDevices = '?'
 
     //* Configurar dotenv
@@ -21,7 +21,7 @@ export const getEvents = async (devices, from, to) => {
         maxBodyLength: Infinity,
         url: process.env.evento + strDevices,
         headers: {
-            'Authorization': 'Bearer GImfoFIg52vJcBn9lvuP1c363Os6dbgu',
+            'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
