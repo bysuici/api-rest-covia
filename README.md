@@ -1,12 +1,12 @@
-## Reinstalar Puppeteer
-Instala Puppeteer y Chrome:
+## Instalar Puppeteer
+
+Nota: Instar glabalmente fuera del proyecto
 
 ```
 npm install puppeteer
-npx puppeteer browsers install chrome
 ```
 
-Instala Chrome 127.0.6533.88
+Instala Chrome con una vercion especifica
 
 ```
 npx puppeteer browsers install chrome@127.0.6533.88
