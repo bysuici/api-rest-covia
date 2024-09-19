@@ -2,24 +2,11 @@ import PuppeteerHTMLPDF from 'puppeteer-html-pdf'
 import PDFMerger from 'pdf-merger-js'
 import moment from 'moment'
 
-export const pdfGenerator = async (coords, events, summary, page, totalPage, from, to) => {
+export const pdfGenerator = async (coords, events, summary, from, to) => {
     moment.locale('es')
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {
         format: 'A4',
-        displayHeaderFooter: false,
-        headerTemplate: `
-            <div style="font-size: 12px; width: 100%; padding: 20px 65px; color: #333;">
-                <b>OKIP</b>
-            </div>
-        `,
-        footerTemplate: '',
-        margin: {
-            top: '0px',
-            bottom: '0px',
-            left: '60px',
-            right: '60px'
-        },
         printBackground: true
     }
 
@@ -33,13 +20,17 @@ export const pdfGenerator = async (coords, events, summary, page, totalPage, fro
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
+        <script src="https://cdn.tailwindcss.com"></script>
         <style>
             *{
+                margin: 0;
+                padding: 0;
                 font-family: Arial, Helvetica, sans-serif;
             }
 
             #map {
-                height: 300px;
+                height: 250px;
                 border-radius: 20px;
                 overflow: hidden;
             }
@@ -48,74 +39,86 @@ export const pdfGenerator = async (coords, events, summary, page, totalPage, fro
                 width: 100%;
                 height: 200px;
             }
-                
-            .header {
-                margin-top: 10px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 0px
-            }
         </style>
     </head>
     <body>
 
-        <div class="document">
-            <div class="header">
-                <div>
-                    <span style="font-size: 11px;">CIBERSEGURIDAD Y TECNOLOGÍA</span>
+        <div class="flex flex-col my-[15px] mx-[68px]">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex flex-col gap-0">
+                    <span class="text-[14px] font-bold underline">INFORME GENERAL</span>
+                    <span class="text-[11px] font-bold">San Miguel de Allende, Gto. Creado el ${moment().format('D [de] MMMM [del] YYYY, HH:mm:ss')}</span>
+                    <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
+                    <span class="text-[11px]"><u>${moment(from).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                 </div>
                 <div>
                     <img src="https://okip.com.mx/_next/static/media/logoblue_okip.b68f643c.webp" width="40" height="40">
                 </div>
             </div>
-            <div style="background: #071952; padding: 3px; border-radius: 30px; margin: 0px 0px 20px 0px;"></div>
+            <div class="bg-[#071952] py-[2px] mb-2"></div>
 
-            <h3>Reporte De Unidad: <u>${summary.deviceName}</u></h3>
-            <div style="display: flex; align-items: center;">
-                <h3 style="margin: 0; margin-right: 10px;">Fecha: </h3>
-                <span>Del ${moment(from).format('D [de] MMMM [del] YYYY')} al ${moment(to).format('D [de] MMMM [del] YYYY')}</span>
-            </div>
-            <h3>Ruta Recorrida:</h3>
+            <h3 class="font-bold mb-2 text-[15px]">Reporte De Unidad: <u>${summary.deviceName}</u></h3>
+            <h3 class="font-bold mb-2 text-[15px]">Ruta Recorrida:</h3>
             <div id="map"></div>
-            <br>
             
-            <h3>Gráfica De Eventos:</h3>
+            <h3 class="font-bold my-2 text-[15px]">Gráfica De Alertas:</h3>
             <div id="chartdiv"></div>
-            <br>
 
-            <h3>Listado De Eventos:</h3>
-            <table>
+            <h3 class="font-bold my-2 text-[15px]">Listado De Alertas:</h3>
+            <table class="text-[13px]">
                 <tr>
-                    <td style="padding: 8px 30px; background: #e4e4e4">Activacion De Boton De Panico</td>
-                    <td style="padding: 8px 30px; background: #efefef">${events.eventCategories.find((event) => event.category == 'ACTIVACION DE BOTON DE PANICO') ? events.eventCategories.find((event) => event.category == 'ACTIVACION DE BOTON DE PANICO').value : '0'}</td>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">Activacion De Boton De Panico</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${events.eventCategories.find((event) => event.category == 'ACTIVACION DE BOTON DE PANICO') ? events.eventCategories.find((event) => event.category == 'ACTIVACION DE BOTON DE PANICO').value : '0'}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 30px; background: #e4e4e4">Alerta De Acercamiento De Colision</td>
-                    <td style="padding: 8px 30px; background: #efefef">${events.eventCategories.find((event) => event.category == 'ALERTA DE ACERCAMIENTO DE COLISION') ? events.eventCategories.find((event) => event.category == 'ALERTA DE ACERCAMIENTO DE COLISION').value : '0'}</td>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">Alerta De Acercamiento De Colision</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${events.eventCategories.find((event) => event.category == 'ALERTA DE ACERCAMIENTO DE COLISION') ? events.eventCategories.find((event) => event.category == 'ALERTA DE ACERCAMIENTO DE COLISION').value : '0'}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 30px; background: #e4e4e4">Conductor Distraido</td>
-                    <td style="padding: 8px 30px; background: #efefef">${events.eventCategories.find((event) => event.category == 'CONDUCTOR DISTRAIDO') ? events.eventCategories.find((event) => event.category == 'CONDUCTOR DISTRAIDO').value : '0'}</td>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">Conductor Distraido</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${events.eventCategories.find((event) => event.category == 'CONDUCTOR DISTRAIDO') ? events.eventCategories.find((event) => event.category == 'CONDUCTOR DISTRAIDO').value : '0'}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 30px; background: #e4e4e4">Deteccion De Telefono</td>
-                    <td style="padding: 8px 30px; background: #efefef">${events.eventCategories.find((event) => event.category == 'DETECCION DE TELEFONO') ? events.eventCategories.find((event) => event.category == 'DETECCION DE TELEFONO').value : '0'}</td>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">Deteccion De Telefono</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${events.eventCategories.find((event) => event.category == 'DETECCION DE TELEFONO') ? events.eventCategories.find((event) => event.category == 'DETECCION DE TELEFONO').value : '0'}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 30px; background: #e4e4e4">Salida De Carril</td>
-                    <td style="padding: 8px 30px; background: #efefef">${events.eventCategories.find((event) => event.category == 'SALIDA DE CARRIL') ? events.eventCategories.find((event) => event.category == 'SALIDA DE CARRIL').value : '0'}</td>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">Salida De Carril</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${events.eventCategories.find((event) => event.category == 'SALIDA DE CARRIL') ? events.eventCategories.find((event) => event.category == 'SALIDA DE CARRIL').value : '0'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">Conductor Fumando</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${events.eventCategories.find((event) => event.category == 'DCONDUCTOR FUMANDO') ? events.eventCategories.find((event) => event.category == 'DCONDUCTOR FUMANDO').value : '0'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">Frenado Brusco</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${events.eventCategories.find((event) => event.category == 'FRENADO BRUSCO') ? events.eventCategories.find((event) => event.category == 'FRENADO BRUSCO').value : '0'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">Aceleración Brusca</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${events.eventCategories.find((event) => event.category == 'ACELERACION BRUSCA') ? events.eventCategories.find((event) => event.category == 'ACELERACION BRUSCA').value : '0'}</td>
                 </tr>
             </table>
-            <br>
 
-            <h3>Resumen De Gasolina:</h3>
-            <p><b>Distancia Recorrida (km):</b> ${summary.distance.toFixed(2)} km</p>
-            <p><b>Rendimiento:</b> ${summary.averageSpeed.toFixed(2)} km por litro</p>
-            <p><b>Combustible Gastado:</b> ${summary.spentFuel.toFixed(2)} litros</p>
+            <h3 class="font-bold my-2 text-[15px]">Resumen De Gasolina:</h3>
+            <p class="text-[13px]"><b>Distancia Recorrida (km):</b> <u>${!summary.distance || summary.distance == 0 ? '0' : (summary.distance / 1000).toFixed(2)} KM</u></p>
+            <p class="text-[13px]"><b>Rendimiento:</b> <u>${!summary.distance || summary.distance == 0 || !summary.spentFuel || summary.spentFuel == 0 ? '0' : ((summary.distance / 1000) / summary.spentFuel).toFixed(0)} KM/Litro</u></p>
+            <p class="text-[13px] mb-6"><b>Combustible Gastado:</b> <u>${!summary.spentFuel || summary.spentFuel == 0 ? '0' : summary.spentFuel.toFixed(2)} Litro(s)</u></p>
 
-            <div style="background: #071952; padding: 3px; border-radius: 30px; margin: 20px 0px"></div>
-            <center><span style="font-size: 11px;">${page}/${totalPage}</span></center>
+            <div style="background: #071952; padding: 15px 60px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="material-symbols-outlined" style="color: white; font-size: 15px; background: #071952;">call</span>
+                    <span style="color: white; font-size: 12px; font-weight: 400">+521 56 3173 4229</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="material-symbols-outlined" style="color: white; font-size: 15px; background: #071952;">location_on</span>
+                    <span style="color: white; font-size: 12px; font-weight: 400"> Camino a cruz del palmar 204, SMA. GTO.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="material-symbols-outlined" style="color: white; font-size: 15px; background: #071952;">language</span>
+                    <span style="color: white; font-size: 12px; font-weight: 400">www.okip.com.mx</span>
+                </div>
+            </div>
         </div>
 
         <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -129,7 +132,7 @@ export const pdfGenerator = async (coords, events, summary, page, totalPage, fro
                 zoomAnimation: false,
                 fadeAnimation: false,
                 markerZoomAnimation: false
-            }).setView(${JSON.stringify(coords.coords[0])}, 10);
+            }).setView(${JSON.stringify(coords.coords[0])}, 5);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 10,
@@ -138,22 +141,24 @@ export const pdfGenerator = async (coords, events, summary, page, totalPage, fro
 
             var polyline = L.polyline(${JSON.stringify(coords.coords)}, {color: 'blue'}).addTo(map);
             map.fitBounds(polyline.getBounds());
-
-            var startMarker = L.marker(${JSON.stringify(coords.coords[0])}, {icon: L.icon({iconUrl: 'https://example.com/start-icon.png'})}).addTo(map);
-            startMarker.bindPopup('Inicio del viaje');
-
-            var endMarker = L.marker(${JSON.stringify(coords.coords[coords.length - 1])}, {icon: L.icon({iconUrl: 'https://example.com/end-icon.png'})}).addTo(map);
-            endMarker.bindPopup('Fin del viaje');
-
-            // Opcional: Añade un marcador para todos los puntos del viaje
-            coords.forEach(function(coord) {
-                L.marker(coord).addTo(map);
-            });
         </script>
 
         <script>
             am5.ready(function() {
                 var root = am5.Root.new("chartdiv");
+
+                var customColorSet = am5.ColorSet.new(root, {
+                    colors: [
+                        am5.color(0xFFCC00),
+                        am5.color(0x87CEEB),
+                        am5.color(0xC0C0C0),
+                        am5.color(0x8A2BE2),
+                        am5.color(0x808080),
+                        am5.color(0x000080),
+                        am5.color(0xA52A2A),
+                        am5.color(0xFFA500),
+                    ]
+                });
 
                 var chart = root.container.children.push( 
                         am5percent.PieChart.new(root, {
@@ -168,6 +173,9 @@ export const pdfGenerator = async (coords, events, summary, page, totalPage, fro
                         endAngle: 270
                     })
                 );
+
+                series.set("colors", customColorSet);
+
 
                 series.data.setAll(${JSON.stringify(events.eventCategories)});
                 series.labels.template.set("forceHidden", true);
@@ -184,6 +192,14 @@ export const pdfGenerator = async (coords, events, summary, page, totalPage, fro
                     cornerRadiusTR: 10,
                     cornerRadiusBL: 10,
                     cornerRadiusBR: 10
+                });
+
+                legend.labels.template.setAll({
+                    fontSize: 13
+                });
+
+                legend.valueLabels.template.setAll({
+                    fontSize: 13
                 });
 
                 legend.data.setAll(series.dataItems);
