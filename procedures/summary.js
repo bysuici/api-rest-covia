@@ -28,8 +28,6 @@ export const getSummary = async (devices, from, to, token) => {
 
     const responseGas = await axios.request(configGas)
 
-    console.log(responseGas)
-
     let dataGas = []
 
     responseGas.data.forEach((gas) => {

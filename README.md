@@ -1,3 +1,9 @@
+## Run project
+
+```
+npm run dev
+```
+
 ## Instalar Puppeteer
 
 Nota: Instar glabalmente fuera del proyecto
