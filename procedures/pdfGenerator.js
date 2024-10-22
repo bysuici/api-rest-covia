@@ -62,7 +62,7 @@ export const pdfGenerator = async (coords, events, summary, from, to) => {
             <div id="map"></div>
             
             <h3 class="font-bold my-2 text-[15px]">Gráfica De Alertas:</h3>
-            ${events.eventCategories.length > 0 ? '<div id="chartdiv"></div>' : '<p class="text-2xl h-[225px] flex items-center justify-center">No hay alertas registradas</p>'}
+            ${events.eventCategories.length > 0 ? '<div id="chartdiv"></div>' : '<p class="text-2xl h-[200px] flex items-center justify-center">No hay alertas registradas</p>'}
 
             <h3 class="font-bold my-2 text-[15px]">Listado De Alertas:</h3>
             <table class="text-[13px]">
