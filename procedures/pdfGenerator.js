@@ -107,15 +107,15 @@ export const pdfGenerator = async (coords, events, summary, from, to) => {
 
             <div style="background: #071952; padding: 15px 60px; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="material-symbols-outlined" style="color: white; font-size: 15px; background: #071952;">call</span>
+                    <span class="material-symbols-outlined" style="color: white; font-size: 13px; background: #071952;">call</span>
                     <span style="color: white; font-size: 12px; font-weight: 400">+521 56 3173 4229</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="material-symbols-outlined" style="color: white; font-size: 15px; background: #071952;">location_on</span>
+                    <span class="material-symbols-outlined" style="color: white; font-size: 13px; background: #071952;">location_on</span>
                     <span style="color: white; font-size: 12px; font-weight: 400"> Camino a cruz del palmar 204, SMA. GTO.</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="material-symbols-outlined" style="color: white; font-size: 15px; background: #071952;">language</span>
+                    <span class="material-symbols-outlined" style="color: white; font-size: 13px; background: #071952;">language</span>
                     <span style="color: white; font-size: 12px; font-weight: 400">www.okip.com.mx</span>
                 </div>
             </div>
