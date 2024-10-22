@@ -67,22 +67,7 @@ export const getEvents = async (devices, from, to, token) => {
         allEvents.push(objEvent)
     })
 
+    console.log(allEvents[0].eventCategories[0])
+
     return allEvents
-
-
-    // let allEvents = []
-
-    // devices.forEach((deviceId) => {
-    //     const events = dataEvents.filter((event) => event.deviceId == deviceId)
-
-    //     let descEvents = []
-
-    //     events.forEach((event) => {
-    //         descEvents.push(event.attributes.descripcion)
-    //     })
-
-    //     allEvents.push(objEvent)
-    // })
-
-    // return allEvents
 }

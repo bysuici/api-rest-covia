@@ -47,7 +47,7 @@ export const pdfGenerator = async (coords, events, summary, from, to) => {
             <div class="flex items-center justify-between mb-2">
                 <div class="flex flex-col gap-0">
                     <span class="text-[14px] font-bold underline">INFORME GENERAL</span>
-                    <span class="text-[11px] font-bold">San Miguel de Allende, Gto. Creado el ${moment().format('D [de] MMMM [del] YYYY, HH:mm:ss')}</span>
+                    <span class="text-[11px] font-bold">San Miguel de Allende, Gto. Creado el ${moment().format('D [de] MMMM [del] YYYY')}</span>
                     <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
                     <span class="text-[11px]"><u>${moment(from).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                 </div>
@@ -62,7 +62,7 @@ export const pdfGenerator = async (coords, events, summary, from, to) => {
             <div id="map"></div>
             
             <h3 class="font-bold my-2 text-[15px]">Gráfica De Alertas:</h3>
-            <div id="chartdiv"></div>
+            ${events.eventCategories.length > 0 ? '<div id="chartdiv"></div>' : '<p class="text-2xl h-[225px] flex items-center justify-center">No hay alertas registradas</p>'}
 
             <h3 class="font-bold my-2 text-[15px]">Listado De Alertas:</h3>
             <table class="text-[13px]">
@@ -101,9 +101,9 @@ export const pdfGenerator = async (coords, events, summary, from, to) => {
             </table>
 
             <h3 class="font-bold my-2 text-[15px]">Resumen De Gasolina:</h3>
-            <p class="text-[13px]"><b>Distancia Recorrida (km):</b> <u>${!summary.distance || summary.distance == 0 ? '0' : (summary.distance / 1000).toFixed(2)} KM</u></p>
-            <p class="text-[13px]"><b>Rendimiento:</b> <u>${!summary.distance || summary.distance == 0 || !summary.spentFuel || summary.spentFuel == 0 ? '0' : ((summary.distance / 1000) / summary.spentFuel).toFixed(0)} KM/Litro</u></p>
-            <p class="text-[13px] mb-6"><b>Combustible Gastado:</b> <u>${!summary.spentFuel || summary.spentFuel == 0 ? '0' : summary.spentFuel.toFixed(2)} Litro(s)</u></p>
+            <p class="text-[13px]"><b>Distancia Recorrida (km):</b>${!summary.distance ? '0' : summary.distance == 0 ? '0' : summary.distance == null ? '0' : (summary.distance / 1000).toFixed(2)} km</p>
+            <p class="text-[13px]"><b>Rendimiento:</b>${!summary.kmPerLiter ? '0' : summary.kmPerLiter == 0 ? '0' : summary.kmPerLiter == null ? '0' : summary.kmPerLiter} km/litro</p>
+            <p class="text-[13px] mb-6"><b>Combustible Gastado:</b>${!summary.spentFuel ? '0' : summary.spentFuel == 0 ? '0' : summary.spentFuel == null ? '0' : summary.spentFuel.toFixed(2)} Litro(s)</p>
 
             <div style="background: #071952; padding: 15px 60px; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -132,7 +132,7 @@ export const pdfGenerator = async (coords, events, summary, from, to) => {
                 zoomAnimation: false,
                 fadeAnimation: false,
                 markerZoomAnimation: false
-            }).setView(${JSON.stringify(coords.coords[0])}, 5);
+            }).setView(${JSON.stringify(coords.coords[0]) != null ? JSON.stringify(coords.coords[0]) : '[20.914266, -100.743788]'}, ${JSON.stringify(coords.coords[0]) != null ? '5' : '7.5'});
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 10,
