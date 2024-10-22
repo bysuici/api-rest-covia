@@ -105,7 +105,7 @@ export const pdfGenerator = async (coords, events, summary, from, to) => {
             <p class="text-[13px]"><b>Rendimiento:</b>${!summary.kmPerLiter ? '0' : summary.kmPerLiter == 0 ? '0' : summary.kmPerLiter == null ? '0' : summary.kmPerLiter} km/litro</p>
             <p class="text-[13px] mb-6"><b>Combustible Gastado:</b>${!summary.spentFuel ? '0' : summary.spentFuel == 0 ? '0' : summary.spentFuel == null ? '0' : summary.spentFuel.toFixed(2)} Litro(s)</p>
 
-            <div style="background: #071952; padding: 15px 60px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="background: #071952; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <span class="material-symbols-outlined" style="color: white; font-size: 13px; background: #071952;">call</span>
                     <span style="color: white; font-size: 12px; font-weight: 400">+521 56 3173 4229</span>
