@@ -67,7 +67,5 @@ export const getEvents = async (devices, from, to, token) => {
         allEvents.push(objEvent)
     })
 
-    console.log(allEvents[0].eventCategories[0])
-
     return allEvents
 }

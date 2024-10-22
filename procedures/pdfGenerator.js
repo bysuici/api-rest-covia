@@ -2,7 +2,7 @@ import PuppeteerHTMLPDF from 'puppeteer-html-pdf'
 import PDFMerger from 'pdf-merger-js'
 import moment from 'moment'
 
-export const pdfGenerator = async (coords, events, summary, from, to) => {
+export const pdfGenerator = async (coords, events, summary, from, to, deviceData) => {
     moment.locale('es')
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {
@@ -102,7 +102,7 @@ export const pdfGenerator = async (coords, events, summary, from, to) => {
 
             <h3 class="font-bold my-2 text-[15px]">Resumen De Gasolina:</h3>
             <p class="text-[13px]"><b>Distancia Recorrida (km):</b>${!summary.distance ? '0' : summary.distance == 0 ? '0' : summary.distance == null ? '0' : (summary.distance / 1000).toFixed(2)} km</p>
-            <p class="text-[13px]"><b>Rendimiento:</b>${!summary.kmPerLiter ? '0' : summary.kmPerLiter == 0 ? '0' : summary.kmPerLiter == null ? '0' : summary.kmPerLiter} km/litro</p>
+            <p class="text-[13px]"><b>Rendimiento:</b>${!deviceData.attributes.kmPerLiter ? '0' : deviceData.attributes.kmPerLiter} km/litro</p>
             <p class="text-[13px] mb-6"><b>Combustible Gastado:</b>${!summary.spentFuel ? '0' : summary.spentFuel == 0 ? '0' : summary.spentFuel == null ? '0' : summary.spentFuel.toFixed(2)} Litro(s)</p>
 
             <div style="background: #071952; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;">
