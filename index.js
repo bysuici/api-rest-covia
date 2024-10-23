@@ -10,7 +10,7 @@ app.use(urlencoded({ extended: true, limit: '100mb' }))
 app.use(json({ limit: '100mb' }))
 app.use(cors(
     {
-        origin: 'http://localhost:5173',
+        origin: 'localhost:5173',
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
     }
 ))
@@ -20,5 +20,5 @@ app.use(router)
 
 // Configurar puerto
 app.listen(port, () => {
-    console.log(`Listen on: http://localhost:${port}`)
+    console.log(`Listen on: http://62.72.1.142:${port}`)
 })
