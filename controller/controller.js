@@ -26,7 +26,6 @@ export const report = async (request, response) => {
                             const eventsById = events.find((event) => event.deviceId == deviceId)
                             const summaryById = summary.find((summary) => summary.deviceId == deviceId)
                             const deviceDataById = devicesData.find((deviceData) => deviceData.id == deviceId)
-                            console.log(deviceDataById)
 
                             const pdf = await pdfGenerator(coordsById, eventsById, summaryById, from, to, deviceDataById)
 

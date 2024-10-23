@@ -8,7 +8,12 @@ const port = 3000
 // Configuracion del servicio
 app.use(urlencoded({ extended: true, limit: '100mb' }))
 app.use(json({ limit: '100mb' }))
-app.use(cors())
+app.use(cors(
+    {
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    }
+))
 
 // Routers
 app.use(router)
