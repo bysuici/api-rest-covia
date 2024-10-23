@@ -10,7 +10,7 @@ app.use(urlencoded({ extended: true, limit: '100mb' }))
 app.use(json({ limit: '100mb' }))
 app.use(cors(
     {
-        origin: 'http://localhost:5173/home',
+        origin: 'http://localhost:5173',
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
     }
 ))
