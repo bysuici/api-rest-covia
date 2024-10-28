@@ -2,7 +2,7 @@ import PuppeteerHTMLPDF from 'puppeteer-html-pdf'
 import PDFMerger from 'pdf-merger-js'
 import moment from 'moment'
 
-export const pdfGenerator = async (coords, events, summary, from, to, deviceData) => {
+export const pdfGenerator = async (coords, events, summary, realFrom, realTo, deviceData) => {
     moment.locale('es')
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {
@@ -47,9 +47,9 @@ export const pdfGenerator = async (coords, events, summary, from, to, deviceData
             <div class="flex items-center justify-between mb-2">
                 <div class="flex flex-col gap-0">
                     <span class="text-[14px] font-bold underline">INFORME GENERAL</span>
-                    <span class="text-[11px] font-bold">San Miguel de Allende, Gto. Creado el ${moment().format('D [de] MMMM [del] YYYY')}</span>
+                    <span class="text-[11px] font-bold">San Miguel de Allende, Gto.</span>
                     <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
-                    <span class="text-[11px]"><u>${moment(from).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
+                    <span class="text-[11px]"><u>${moment(realFrom).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(realTo).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                 </div>
                 <div>
                     <img src="https://okip.com.mx/_next/static/media/logoblue_okip.b68f643c.webp" width="40" height="40">
@@ -101,9 +101,9 @@ export const pdfGenerator = async (coords, events, summary, from, to, deviceData
             </table>
 
             <h3 class="font-bold my-2 text-[15px]">Resumen De Gasolina:</h3>
-            <p class="text-[13px]"><b>Distancia Recorrida (km):</b>${!summary.distance ? '0' : summary.distance == 0 ? '0' : summary.distance == null ? '0' : (summary.distance / 1000).toFixed(2)} km</p>
-            <p class="text-[13px]"><b>Rendimiento:</b>${!deviceData.attributes.kmPerLiter ? '0' : deviceData.attributes.kmPerLiter} km/litro</p>
-            <p class="text-[13px] mb-6"><b>Combustible Gastado:</b>${!summary.spentFuel ? '0' : summary.spentFuel == 0 ? '0' : summary.spentFuel == null ? '0' : summary.spentFuel.toFixed(2)} Litro(s)</p>
+            <p class="text-[13px]"><b>Distancia Recorrida (km):</b> ${!summary.distance ? '0' : summary.distance == 0 ? '0' : summary.distance == null ? '0' : (summary.distance / 1000).toFixed(2)} km</p>
+            <p class="text-[13px]"><b>Rendimiento:</b> ${!deviceData.attributes.kmPerLiter ? '0' : deviceData.attributes.kmPerLiter} km/litro</p>
+            <p class="text-[13px] mb-6"><b>Combustible Gastado:</b> ${!summary.spentFuel ? '0' : summary.spentFuel == 0 ? '0' : summary.spentFuel == null ? '0' : summary.spentFuel.toFixed(2)} Litro(s)</p>
 
             <div style="background: #071952; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">

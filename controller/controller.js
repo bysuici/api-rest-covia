@@ -6,9 +6,11 @@ import { validateToken } from '../procedures/validateToken.js'
 import { getDevices } from '../procedures/devices.js'
 
 export const report = async (request, response) => {
-    const { devices, from, to, token } = request.body
+    const { devices, from, to, realFrom, realTo, token } = request.body
 
-    if (!devices || devices.length == 0 || !from || from == '' || !to || to == '' || !token || token == '') {
+    console.log(request.headers)
+
+    if (!devices || devices.length == 0 || !from || from == '' || !to || to == '' || !token || token == '' || !realFrom || realFrom == '' || !realTo || realTo == '') {
         return response.status(400).json({ error: true, msg: 'missing_or_empty_fields' })
     } else {
         switch (validateToken(token)) {
@@ -27,7 +29,7 @@ export const report = async (request, response) => {
                             const summaryById = summary.find((summary) => summary.deviceId == deviceId)
                             const deviceDataById = devicesData.find((deviceData) => deviceData.id == deviceId)
 
-                            const pdf = await pdfGenerator(coordsById, eventsById, summaryById, from, to, deviceDataById)
+                            const pdf = await pdfGenerator(coordsById, eventsById, summaryById, realFrom, realTo, deviceDataById)
 
                             pdfs.push(pdf)
                         }
