@@ -8,8 +8,6 @@ import { getDevices } from '../procedures/devices.js'
 export const report = async (request, response) => {
     const { devices, from, to, realFrom, realTo, token } = request.body
 
-    console.log(request.headers)
-
     if (!devices || devices.length == 0 || !from || from == '' || !to || to == '' || !token || token == '' || !realFrom || realFrom == '' || !realTo || realTo == '') {
         return response.status(400).json({ error: true, msg: 'missing_or_empty_fields' })
     } else {
