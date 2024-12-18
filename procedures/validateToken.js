@@ -1,5 +1,16 @@
-export const validateToken = (token) => {
-    const validate = /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])[a-zA-Z0-9]{32}$/
+import jwt from 'jsonwebtoken'
+import dotenv from 'dotenv'
 
-    return validate.test(token)
+dotenv.config();
+
+export const validateToken = (token) => {
+    let decoded = null;
+
+    try {
+        decoded = jwt.verify(token, process.env.SECRET_KEY)
+    } catch (err) {
+        console.log(err)
+    }
+
+    return decoded == null ? false : true 
 }
