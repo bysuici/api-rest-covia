@@ -30,14 +30,14 @@ export const pdfGenerator = async (device, from, to) => {
             }
 
             #map {
-                height: 250px;
+                height: 400px;
                 border-radius: 20px;
                 overflow: hidden;
             }
 
             #chartdiv {
                 width: 100%;
-                height: 650px;
+                height: 500px;
             }
         </style>
     </head>
@@ -49,7 +49,7 @@ export const pdfGenerator = async (device, from, to) => {
                     <span class="text-[14px] font-bold underline">INFORME GENERAL</span>
                     <span class="text-[11px] font-bold">San Miguel de Allende, Gto.</span>
                     <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
-                    <span class="text-[11px]"><u>${moment(from).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
+                    <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                 </div>
                 <div>
                     <img src="https://okip.com.mx/_next/static/media/logoblue_okip.b68f643c.webp" width="40" height="40">
@@ -123,7 +123,10 @@ export const pdfGenerator = async (device, from, to) => {
 
                 var customColorSet = am5.ColorSet.new(root, {
                     colors: [
-                        ${device.alerts.map(alert => `am5.color(0x${alert.color.slice(1)})`).join(',')}
+                        ${device.alerts
+                            .filter(alert => alert.value > 0)
+                            .map(alert => `am5.color(0x${alert.color.slice(1)})`)
+                            .join(',')} // Une los colores en un solo string
                     ]
                 });
 
@@ -144,7 +147,7 @@ export const pdfGenerator = async (device, from, to) => {
                 series.set("colors", customColorSet);
 
 
-                series.data.setAll(${JSON.stringify(device.alerts)});
+                series.data.setAll(${JSON.stringify(device.alerts.filter(alert => alert.value !== 0))});
                 series.labels.template.set("forceHidden", true);
                 series.ticks.template.set("forceHidden", true);
 
