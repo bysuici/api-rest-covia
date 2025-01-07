@@ -5,7 +5,7 @@ import { router } from './routes/routes.js'
 const app = express()
 const port = 3000
 const corsOptions = {
-    origin: 'http://coviaaa.okip.com.mx',
+    origin: 'https://coviaaa.okip.com.mx',
     credentials: true,
     optionSuccessStatus: 200
 }
