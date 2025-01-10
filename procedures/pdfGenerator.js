@@ -52,7 +52,7 @@ export const pdfGenerator = async (device, from, to) => {
                     <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                 </div>
                 <div>
-                    <img src="https://okip.com.mx/_next/static/media/logoblue_okip.b68f643c.webp" width="40" height="40">
+                    <img src="https://res.cloudinary.com/dfvro9k4k/image/upload/v1736532408/Covia/hhukhjekxej4eowsueiu.png" width="40" height="40">
                 </div>
             </div>
             <div class="bg-[#071952] py-[2px] mb-2"></div>
