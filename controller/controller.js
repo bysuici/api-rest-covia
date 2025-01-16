@@ -12,7 +12,7 @@ export const report = async (request, response) => {
         switch (validateToken(authorization)) {
             case true:
                 try {
-                    const devicesData = await getDevices(devices, from, to, authorization)
+                    const devicesData = await getDevices(devices, from, to, authorization, realFrom, realTo)
                     let pdfs = []
 
                     try {

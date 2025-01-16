@@ -1,7 +1,7 @@
 import axios from 'axios'
 import dotenv from 'dotenv'
 
-export const getDevices = async (devices, from, to, token) => {
+export const getDevices = async (devices, from, to, token, realFrom, realTo) => {
     dotenv.config()
 
     const configDevices = {
@@ -16,7 +16,9 @@ export const getDevices = async (devices, from, to, token) => {
         data: {
             devices,
             from,
-            to
+            to,
+            realFrom,
+            realTo,
         }
     }
 
