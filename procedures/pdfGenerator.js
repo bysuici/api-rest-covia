@@ -241,20 +241,26 @@ export const pdfGenerator = async (device, from, to) => {
         <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
 
         <script>
-            var map = L.map('map',{
+            var map = L.map('map', {
                 zoomControl: false,
                 zoomAnimation: false,
                 fadeAnimation: false,
                 markerZoomAnimation: false
-            }).setView(${JSON.stringify(device.coordinates[0]) != null ? JSON.stringify(device.coordinates[0]) : '[20.914266, -100.743788]'}, ${JSON.stringify(device.coordinates[0]) != null ? '5' : '7.5'});
+            });
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 10,
+                maxZoom: 18,
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
 
-            var polyline = L.polyline(${JSON.stringify(device.coordinates)}, {color: 'blue'}).addTo(map);
-            map.fitBounds(polyline.getBounds());
+            var coordinates = ${JSON.stringify(device.coordinates)};
+            if (coordinates.length > 0) {
+                var polyline = L.polyline(coordinates, { color: 'blue' }).addTo(map);
+                var bounds = polyline.getBounds();
+                map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
+            } else {
+                map.setView([20.914266, -100.743788], 9);
+            }
         </script>
 
         <script>
@@ -264,13 +270,13 @@ export const pdfGenerator = async (device, from, to) => {
                 var customColorSet = am5.ColorSet.new(root, {
                     colors: [
                         ${device.alerts
-                            .filter(alert => alert.value > 0)
-                            .map(deviceAlert => {
-                                const matchedAlert = alerts.find(a => a.alert === deviceAlert.category);
-                                return matchedAlert ? `am5.color(0x${matchedAlert.color.slice(1)})` : `am5.color(0x${deviceAlert.color.slice(1)})`;
-                            })
-                            .join(',')
-                        } // Une los colores en un solo string
+            .filter(alert => alert.value > 0)
+            .map(deviceAlert => {
+                const matchedAlert = alerts.find(a => a.alert === deviceAlert.category);
+                return matchedAlert ? `am5.color(0x${matchedAlert.color.slice(1)})` : `am5.color(0x${deviceAlert.color.slice(1)})`;
+            })
+            .join(',')
+        } // Une los colores en un solo string
                     ]
                 });
 
