@@ -254,12 +254,13 @@ export const pdfGenerator = async (device, from, to) => {
             }).addTo(map);
 
             var coordinates = ${JSON.stringify(device.coordinates)};
-            if (coordinates.length > 0) {
+            if (coordinates.length != 1) {
                 var polyline = L.polyline(coordinates, { color: 'blue' }).addTo(map);
                 var bounds = polyline.getBounds();
                 map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
             } else {
-                map.setView([20.914266, -100.743788], 9);
+                var marker = L.marker(coordinates[0]).addTo(map);
+                map.setView(coordinates[0], 14);
             }
         </script>
 
