@@ -214,7 +214,7 @@ export const pdfGenerator = async (device, from, to) => {
                 `).join('')}
             </table>
 
-            <h3 class="font-bold mt-4 mb-2 text-[15px]">Resumen De combustible:</h3>
+            <h3 class="font-bold mt-4 mb-2 text-[15px]">Resumen De Combustible:</h3>
             <p class="text-[13px]"><b>Distancia Recorrida (km):</b> ${!device.summary.kilometers_traveled ? '0' : device.summary.kilometers_traveled == 0 ? '0' : device.summary.kilometers_traveled == null ? '0' : device.summary.kilometers_traveled} km</p>
             <p class="text-[13px]"><b>Rendimiento:</b> ${!device.summary.km_per_liter ? '0' : device.summary.km_per_liter} km/litro</p>
             <p class="text-[13px] mb-6"><b>Combustible Gastado:</b> ${!device.summary.spent_gas ? '0' : device.summary.spent_gas == 0 ? '0' : device.summary.spent_gas == null ? '0' : device.summary.spent_gas} Litro(s)</p>
