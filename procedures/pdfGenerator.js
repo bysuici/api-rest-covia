@@ -2,7 +2,7 @@ import PuppeteerHTMLPDF from 'puppeteer-html-pdf'
 import PDFMerger from 'pdf-merger-js'
 import moment from 'moment'
 
-export const pdfGenerator = async (device, from, to) => {
+export const pdfGenerator = async (device, from, to, isSatelite) => {
     moment.locale('es')
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {
@@ -248,10 +248,31 @@ export const pdfGenerator = async (device, from, to) => {
                 markerZoomAnimation: false
             });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            // Condición para vista satelital o estándar OSM
+            var isSatelite = ${isSatelite};
+
+            if (isSatelite) {
+            // Vista híbrida: satélite + nombres de calles y lugares
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 maxZoom: 18,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+            });
+
+            const labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 18,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+            });
+
+            // Agregar ambas capas al mapa
+            L.layerGroup([satelliteLayer, labelsLayer]).addTo(map);
+        }
+        else {
+                // Vista estándar OpenStreetMap
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+            }
 
             var coordinates = ${JSON.stringify(device.coordinates)};
             if (coordinates.length != 1) {

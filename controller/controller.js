@@ -4,7 +4,7 @@ import { getDevices } from '../procedures/devices.js'
 
 export const report = async (request, response) => {
     const { authorization } = request.headers
-    const { devices, from, realFrom, to, realTo } = request.body
+    const { devices, from, realFrom, to, realTo, isSatelite = false } = request.body
 
     if (!devices || devices.length == 0 || !from || from == '' || !to || to == '' || !authorization || authorization == '' || !realFrom || realFrom == '' || !realTo || realTo == '') {
         return response.status(400).json({ error: true, msg: 'missing_fields_or_token' })
@@ -17,7 +17,7 @@ export const report = async (request, response) => {
 
                     try {
                         for (const device of devicesData.data) {
-                            const pdf = await pdfGenerator(device, realFrom, realTo,)
+                            const pdf = await pdfGenerator(device, realFrom, realTo, isSatelite)
 
                             pdfs.push(pdf)
                         }
