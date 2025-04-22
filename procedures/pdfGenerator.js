@@ -206,7 +206,12 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
 
             <h3 class="font-bold mb-4 mt-12 text-[15px]">Listado De Alertas:</h3>
             <table class="text-[13px]">
-                ${device.alerts.map(alert => `
+                ${device.alerts.filter(alert => ![
+                    'Persona peligrosidad baja',
+                    'Persona peligrosidad media',
+                    'Persona peligrosidad alta',
+                    'Reconocimiento de placa'
+                ].includes(alert.category)).map(alert => `
                 <tr>
                     <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">${alert.category}</td>
                     <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${alert.value}</td>
