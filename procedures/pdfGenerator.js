@@ -191,9 +191,6 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
                     <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
                     <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                 </div>
-                <div>
-                    <img src="https://res.cloudinary.com/dfvro9k4k/image/upload/v1736532408/Covia/hhukhjekxej4eowsueiu.png" width="40" height="40">
-                </div>
             </div>
             <div class="bg-[#071952] py-[2px] mb-2"></div>
 
@@ -210,7 +207,8 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
                     'Persona peligrosidad baja',
                     'Persona peligrosidad media',
                     'Persona peligrosidad alta',
-                    'Reconocimiento de placa'
+                    'Reconocimiento de placa',
+                    'Personal reconocido'
                 ].includes(alert.category)).map(alert => `
                 <tr>
                     <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">${alert.category}</td>
