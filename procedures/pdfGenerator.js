@@ -208,7 +208,10 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
                     'Persona peligrosidad media',
                     'Persona peligrosidad alta',
                     'Reconocimiento de placa',
-                    'Personal reconocido'
+                    'Personal reconocido',
+                    'Persona no reconocida',
+                    'Inicio del recorrido',
+                    'Fin del recorrido',
                 ].includes(alert.category)).map(alert => `
                 <tr>
                     <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">${alert.category}</td>
