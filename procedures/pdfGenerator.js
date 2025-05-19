@@ -210,7 +210,6 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
                     'Reconocimiento de placa',
                     'Personal reconocido',
                     'Persona no reconocida',
-                    'Inicio del recorrido',
                     'Fin del recorrido',
                 ].includes(alert.category)).map(alert => `
                 <tr>
