@@ -10,15 +10,11 @@ const corsOptions = {
     optionSuccessStatus: 200
 }
 
-// Configuracion del servicio
 app.use(urlencoded({ extended: true, limit: '100mb' }))
 app.use(json({ limit: '100mb' }))
 app.use(cors(corsOptions))
-
-// Routers
 app.use(router)
 
-// Configurar puerto
 app.listen(port, () => {
     console.log(`Listen on: http://62.72.1.142:${port}`)
 })
