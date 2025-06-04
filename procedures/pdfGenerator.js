@@ -3,7 +3,7 @@ import PDFMerger from 'pdf-merger-js'
 import moment from 'moment'
 import { alerts } from '../utils/utils.js'
 
-export const pdfGenerator = async (device, from, to, isSatelite) => {
+export const pdfGenerator = async (device, from, to, isSatelite, reportSections = {}) => {
     moment.locale('es')
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {
@@ -13,6 +13,268 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
 
     htmlPDF.setOptions(options)
 
+    // Verificar qué secciones están habilitadas
+    const {
+        route = true,
+        chart = true,
+        alerts: includeAlerts = true,
+        summary = true
+    } = reportSections;
+
+    // Funciones para generar cada sección
+    const generateRouteSection = () => {
+        if (!route) return '';
+        return `
+            <h3 class="font-bold mb-2 text-[15px]">Ruta Recorrida:</h3>
+            <div id="map"></div>
+        `;
+    };
+
+    const generateChartSection = () => {
+        if (!chart) return '';
+        return `
+            <h3 class="font-bold my-2 text-[15px]">Gráfica De Alertas:</h3>
+            ${device.alerts.length > 0 ? '<div id="chartdiv"></div>' : '<p class="text-2xl h-[200px] flex items-center justify-center">No hay alertas registradas</p>'}
+        `;
+    };
+
+    const generateAlertsSection = () => {
+        if (!includeAlerts) return '';
+        return `
+            <h3 class="font-bold mb-4 mt-12 text-[15px]">Listado De Alertas:</h3>
+            <table class="text-[13px]">
+                ${device.alerts.filter(alert => ![
+            'Persona peligrosidad baja',
+            'Persona peligrosidad media',
+            'Persona peligrosidad alta',
+            'Reconocimiento de placa',
+            'Personal reconocido',
+            'Persona no reconocida',
+            'Fin del recorrido',
+            'Alerta de geo-cercado',
+            'Advertencia de colisión de peatones',
+            'Alerta de cambios anormales de temperatura',
+        ].includes(alert.category)).map(alert => `
+                <tr>
+                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">${alert.category}</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${alert.value}</td>
+                </tr>
+                `).join('')}
+            </table>
+        `;
+    };
+
+    const generateSummarySection = () => {
+        if (!summary) return '';
+
+        // Función auxiliar para formatear valores seguros
+        const safeValue = (value, unit = '') => {
+            const numValue = value == null || value === 0 || !value ? '0' : value;
+            return `${numValue}${unit}`;
+        };
+
+        return `
+            <h3 class="font-bold mt-6 mb-4 text-[15px] text-[#071952]">Resumen de Combustible</h3>
+            
+                
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #071952; color: white;">
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; border: 1px solid #071952;">Parametros</th>
+                            <th style="padding: 12px 15px; text-align: center; font-weight: 600; border: 1px solid #071952;">Valor</th>
+                            <th style="padding: 12px 15px; text-align: center; font-weight: 600; border: 1px solid #071952;">Unidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: white;">
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; font-weight: 500;">Distancia Recorrida</td>
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #071952;">
+                                ${safeValue(device.summary.kilometers_traveled)}
+                            </td>
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center;">km</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; font-weight: 500;">Rendimiento</td>
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #071952;">
+                                ${safeValue(device.summary.km_per_liter)}
+                            </td>
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center;">km/litro</td>
+                        </tr>
+                        <tr style="background: white;">
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; font-weight: 500;">Combustible Gastado</td>
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #071952;">
+                                ${safeValue(device.summary.spent_gas)}
+                            </td>
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center;">Litros</td>
+                        </tr>
+                    </tbody>
+                </table>
+        `;
+    };
+
+    // Script del mapa (solo si la sección de ruta está habilitada)
+    const generateMapScript = () => {
+        if (!route) return '';
+        return `
+            <script>
+                var map = L.map('map', {
+                    zoomControl: false,
+                    zoomAnimation: false,
+                    fadeAnimation: false,
+                    markerZoomAnimation: false
+                });
+
+                // Condición para vista satelital o estándar OSM
+                var isSatelite = ${isSatelite};
+
+                if (isSatelite) {
+                    // Vista híbrida: satélite + nombres de calles y lugares
+                    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 18,
+                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+                    });
+
+                    const labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 18,
+                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+                    });
+
+                    // Agregar ambas capas al mapa
+                    L.layerGroup([satelliteLayer, labelsLayer]).addTo(map);
+                } else {
+                    // Vista estándar OpenStreetMap
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 18,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+                }
+
+                var coordinates = ${JSON.stringify(device.coordinates)};
+                if (coordinates.length != 1) {
+                    var polyline = L.polyline(coordinates, { color: 'blue' }).addTo(map);
+                    var bounds = polyline.getBounds();
+                    map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
+                } else {
+                    var marker = L.marker(coordinates[0]).addTo(map);
+                    map.setView(coordinates[0], 14);
+                }
+            </script>
+        `;
+    };
+
+    // Script de la gráfica (solo si la sección de gráfica está habilitada)
+    const generateChartScript = () => {
+        if (!chart || device.alerts.length === 0) return '';
+        return `
+            <script>
+                am5.ready(function() {
+                    var root = am5.Root.new("chartdiv");
+
+                    var customColorSet = am5.ColorSet.new(root, {
+                        colors: [
+                            ${device.alerts
+                .filter(alert => alert.value > 0)
+                .map(deviceAlert => {
+                    const matchedAlert = alerts.find(a => a.alert === deviceAlert.category);
+                    return matchedAlert ? `am5.color(0x${matchedAlert.color.slice(1)})` : `am5.color(0x${deviceAlert.color.slice(1)})`;
+                })
+                .join(',')
+            } // Une los colores en un solo string
+                        ]
+                    });
+
+                    var chart = root.container.children.push( 
+                        am5percent.PieChart.new(root, {
+                            layout: root.horizontalLayout
+                        }) 
+                    );
+
+                    var series = chart.series.push(
+                        am5percent.PieSeries.new(root, {
+                            valueField: "value",
+                            categoryField: "category",
+                            endAngle: 270
+                        })
+                    );
+
+                    series.set("colors", customColorSet);
+
+                    series.data.setAll(${JSON.stringify(device.alerts.filter(alert => alert.value !== 0))});
+                    series.labels.template.set("forceHidden", true);
+                    series.ticks.template.set("forceHidden", true);
+
+                    var legend = chart.children.push(am5.Legend.new(root, {
+                        centerY: am5.percent(50),
+                        y: am5.percent(50),
+                        layout: root.verticalLayout
+                    }));
+
+                    legend.markerRectangles.template.setAll({
+                        cornerRadiusTL: 10,
+                        cornerRadiusTR: 10,
+                        cornerRadiusBL: 10,
+                        cornerRadiusBR: 10
+                    });
+
+                    legend.labels.template.setAll({
+                        fontSize: 13
+                    });
+
+                    legend.valueLabels.template.setAll({
+                        fontSize: 13
+                    });
+
+                    legend.data.setAll(series.dataItems);
+                });
+            </script>
+        `;
+    };
+
+    // Determinar qué librerías cargar según las secciones habilitadas
+    const getRequiredLibraries = () => {
+        let libraries = [];
+
+        if (route) {
+            libraries.push('<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>');
+        }
+
+        if (chart && device.alerts.length > 0) {
+            libraries.push('<script src="https://cdn.amcharts.com/lib/5/index.js"></script>');
+            libraries.push('<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>');
+        }
+
+        return libraries.join('\n        ');
+    };
+
+    // Determinar qué estilos CSS cargar según las secciones habilitadas
+    const getRequiredStyles = () => {
+        let leafletCSS = '';
+        let mapStyles = '';
+        let chartStyles = '';
+
+        if (route) {
+            leafletCSS = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />';
+            mapStyles = `
+            #map {
+                height: 400px;
+                border-radius: 20px;
+                overflow: hidden;
+            }`;
+        }
+
+        if (chart) {
+            chartStyles = `
+            #chartdiv {
+                width: 100%;
+                height: 500px;
+            }`;
+        }
+
+        return { leafletCSS, mapStyles, chartStyles };
+    };
+
+    const { leafletCSS, mapStyles, chartStyles } = getRequiredStyles();
+
     const CONTENT = `
     <!DOCTYPE html>
     <html>
@@ -20,7 +282,7 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
         <title>OpenStreetMap Example</title>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+        ${leafletCSS}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
@@ -29,17 +291,8 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
                 padding: 0;
                 font-family: Arial, Helvetica, sans-serif;
             }
-
-            #map {
-                height: 400px;
-                border-radius: 20px;
-                overflow: hidden;
-            }
-
-            #chartdiv {
-                width: 100%;
-                height: 500px;
-            }
+            ${mapStyles}
+            ${chartStyles}
         </style>
     </head>
     <body>
@@ -56,163 +309,21 @@ export const pdfGenerator = async (device, from, to, isSatelite) => {
             <div class="bg-[#071952] py-[2px] mb-2"></div>
 
             <h3 class="font-bold mb-2 text-[15px]">Reporte De Unidad: <u>${device.summary.name}</u></h3>
-            <h3 class="font-bold mb-2 text-[15px]">Ruta Recorrida:</h3>
-            <div id="map"></div>
             
-            <h3 class="font-bold my-2 text-[15px]">Gráfica De Alertas:</h3>
-            ${device.alerts.length > 0 ? '<div id="chartdiv"></div>' : '<p class="text-2xl h-[200px] flex items-center justify-center">No hay alertas registradas</p>'}
-
-            <h3 class="font-bold mb-4 mt-12 text-[15px]">Listado De Alertas:</h3>
-            <table class="text-[13px]">
-                ${device.alerts.filter(alert => ![
-                    'Persona peligrosidad baja',
-                    'Persona peligrosidad media',
-                    'Persona peligrosidad alta',
-                    'Reconocimiento de placa',
-                    'Personal reconocido',
-                    'Persona no reconocida',
-                    'Fin del recorrido',
-                ].includes(alert.category)).map(alert => `
-                <tr>
-                    <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">${alert.category}</td>
-                    <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${alert.value}</td>
-                </tr>
-                `).join('')}
-            </table>
-
-            <h3 class="font-bold mt-4 mb-2 text-[15px]">Resumen De Combustible:</h3>
-            <p class="text-[13px]"><b>Distancia Recorrida (km):</b> ${!device.summary.kilometers_traveled ? '0' : device.summary.kilometers_traveled == 0 ? '0' : device.summary.kilometers_traveled == null ? '0' : device.summary.kilometers_traveled} km</p>
-            <p class="text-[13px]"><b>Rendimiento:</b> ${!device.summary.km_per_liter ? '0' : device.summary.km_per_liter} km/litro</p>
-            <p class="text-[13px] mb-6"><b>Combustible Gastado:</b> ${!device.summary.spent_gas ? '0' : device.summary.spent_gas == 0 ? '0' : device.summary.spent_gas == null ? '0' : device.summary.spent_gas} Litro(s)</p>
-
-            <div style="background: #071952; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="material-symbols-outlined" style="color: white; font-size: 13px; background: #071952;">call</span>
-                    <span style="color: white; font-size: 12px; font-weight: 400">+521 56 3173 4229</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="material-symbols-outlined" style="color: white; font-size: 13px; background: #071952;">location_on</span>
-                    <span style="color: white; font-size: 12px; font-weight: 400"> Camino a cruz del palmar 204, SMA. GTO.</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="material-symbols-outlined" style="color: white; font-size: 13px; background: #071952;">language</span>
-                    <span style="color: white; font-size: 12px; font-weight: 400">www.okip.com.mx</span>
-                </div>
-            </div>
+            ${generateRouteSection()}
+            ${generateChartSection()}
+            ${generateAlertsSection()}
+            ${generateSummarySection()}
         </div>
 
-        <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-
-        <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
-        <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
-
-        <script>
-            var map = L.map('map', {
-                zoomControl: false,
-                zoomAnimation: false,
-                fadeAnimation: false,
-                markerZoomAnimation: false
-            });
-
-            // Condición para vista satelital o estándar OSM
-            var isSatelite = ${isSatelite};
-
-            if (isSatelite) {
-            // Vista híbrida: satélite + nombres de calles y lugares
-            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                maxZoom: 18,
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
-            });
-
-            const labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-                maxZoom: 18,
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
-            });
-
-            // Agregar ambas capas al mapa
-            L.layerGroup([satelliteLayer, labelsLayer]).addTo(map);
-        }
-        else {
-                // Vista estándar OpenStreetMap
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 18,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(map);
-            }
-
-            var coordinates = ${JSON.stringify(device.coordinates)};
-            if (coordinates.length != 1) {
-                var polyline = L.polyline(coordinates, { color: 'blue' }).addTo(map);
-                var bounds = polyline.getBounds();
-                map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
-            } else {
-                var marker = L.marker(coordinates[0]).addTo(map);
-                map.setView(coordinates[0], 14);
-            }
-        </script>
-
-        <script>
-            am5.ready(function() {
-                var root = am5.Root.new("chartdiv");
-
-                var customColorSet = am5.ColorSet.new(root, {
-                    colors: [
-                        ${device.alerts
-            .filter(alert => alert.value > 0)
-            .map(deviceAlert => {
-                const matchedAlert = alerts.find(a => a.alert === deviceAlert.category);
-                return matchedAlert ? `am5.color(0x${matchedAlert.color.slice(1)})` : `am5.color(0x${deviceAlert.color.slice(1)})`;
-            })
-            .join(',')
-        } // Une los colores en un solo string
-                    ]
-                });
-
-                var chart = root.container.children.push( 
-                        am5percent.PieChart.new(root, {
-                        layout: root.horizontalLayout
-                    }) 
-                );
-
-                var series = chart.series.push(
-                    am5percent.PieSeries.new(root, {
-                        valueField: "value",
-                        categoryField: "category",
-                        endAngle: 270
-                    })
-                );
-
-                series.set("colors", customColorSet);
-
-
-                series.data.setAll(${JSON.stringify(device.alerts.filter(alert => alert.value !== 0))});
-                series.labels.template.set("forceHidden", true);
-                series.ticks.template.set("forceHidden", true);
-
-                var legend = chart.children.push(am5.Legend.new(root, {
-                    centerY: am5.percent(50),
-                    y: am5.percent(50),
-                    layout: root.verticalLayout
-                }));
-
-                legend.markerRectangles.template.setAll({
-                    cornerRadiusTL: 10,
-                    cornerRadiusTR: 10,
-                    cornerRadiusBL: 10,
-                    cornerRadiusBR: 10
-                });
-
-                legend.labels.template.setAll({
-                    fontSize: 13
-                });
-
-                legend.valueLabels.template.setAll({
-                    fontSize: 13
-                });
-
-                legend.data.setAll(series.dataItems);
-            });
-        </script>
+        <!-- Cargar librerías JavaScript -->
+        ${route ? '<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>' : ''}
+        ${(chart && device.alerts.length > 0) ? '<script src="https://cdn.amcharts.com/lib/5/index.js"></script>' : ''}
+        ${(chart && device.alerts.length > 0) ? '<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>' : ''}
+        
+        <!-- Scripts de inicialización -->
+        ${generateMapScript()}
+        ${generateChartScript()}
     </body>
     </html>
     `
