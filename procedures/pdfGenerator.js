@@ -24,10 +24,19 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
     // Funciones para generar cada sección
     const generateRouteSection = () => {
         if (!route) return '';
+        const hasCoordinates = device.coordinates && device.coordinates.length > 0;
+
         return `
-            <h3 class="font-bold mb-2 text-[15px]">Ruta Recorrida:</h3>
-            <div id="map"></div>
-        `;
+        <h3 class="font-bold mb-2 text-[15px]">Ruta Recorrida:</h3>
+        <div id="map" class="relative h-[400px] rounded-2xl overflow-hidden bg-gray-200">
+            ${!hasCoordinates
+                ? `<div class="absolute inset-0 flex items-center justify-center bg-gray-200 text-red-600 text-2xl font-bold">
+                      No Hay Movimiento
+                   </div>`
+                : ''
+            }
+        </div>
+    `;
     };
 
     const generateChartSection = () => {
@@ -66,17 +75,13 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
 
     const generateSummarySection = () => {
         if (!summary) return '';
-
-        // Función auxiliar para formatear valores seguros
         const safeValue = (value, unit = '') => {
             const numValue = value == null || value === 0 || !value ? '0' : value;
             return `${numValue}${unit}`;
         };
 
         return `
-            <h3 class="font-bold mt-6 mb-4 text-[15px] text-[#071952]">Resumen de Combustible</h3>
-            
-                
+            <h3 class="font-bold mt-6 mb-4 text-[15px] text-[#071952]">Resumen de Combustible</h3> 
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                     <thead>
                         <tr style="background: #071952; color: white;">
@@ -114,52 +119,49 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
 
     // Script del mapa (solo si la sección de ruta está habilitada)
     const generateMapScript = () => {
-        if (!route) return '';
+        if (!route || !device.coordinates || device.coordinates.length === 0) return '';
+
         return `
-            <script>
-                var map = L.map('map', {
-                    zoomControl: false,
-                    zoomAnimation: false,
-                    fadeAnimation: false,
-                    markerZoomAnimation: false
+        <script>
+            var map = L.map('map', {
+                zoomControl: false,
+                zoomAnimation: false,
+                fadeAnimation: false,
+                markerZoomAnimation: false
+            });
+
+            var isSatelite = ${isSatelite};
+
+            if (isSatelite) {
+                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 18,
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
                 });
 
-                // Condición para vista satelital o estándar OSM
-                var isSatelite = ${isSatelite};
+                const labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 18,
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+                });
 
-                if (isSatelite) {
-                    // Vista híbrida: satélite + nombres de calles y lugares
-                    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                        maxZoom: 18,
-                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
-                    });
+                L.layerGroup([satelliteLayer, labelsLayer]).addTo(map);
+            } else {
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+            }
 
-                    const labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-                        maxZoom: 18,
-                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
-                    });
-
-                    // Agregar ambas capas al mapa
-                    L.layerGroup([satelliteLayer, labelsLayer]).addTo(map);
-                } else {
-                    // Vista estándar OpenStreetMap
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 18,
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    }).addTo(map);
-                }
-
-                var coordinates = ${JSON.stringify(device.coordinates)};
-                if (coordinates.length != 1) {
-                    var polyline = L.polyline(coordinates, { color: 'blue' }).addTo(map);
-                    var bounds = polyline.getBounds();
-                    map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
-                } else {
-                    var marker = L.marker(coordinates[0]).addTo(map);
-                    map.setView(coordinates[0], 14);
-                }
-            </script>
-        `;
+            var coordinates = ${JSON.stringify(device.coordinates)};
+            if (coordinates.length !== 1) {
+                var polyline = L.polyline(coordinates, { color: 'blue' }).addTo(map);
+                var bounds = polyline.getBounds();
+                map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
+            } else {
+                var marker = L.marker(coordinates[0]).addTo(map);
+                map.setView(coordinates[0], 14);
+            }
+        </script>
+    `;
     };
 
     // Script de la gráfica (solo si la sección de gráfica está habilitada)
