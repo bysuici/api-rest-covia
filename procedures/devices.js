@@ -38,7 +38,7 @@ export const getDevicesGeneral = async (devices, from, to, token, realFrom, real
     const configDevices = {
         method: 'post',
         maxBodyLength: Infinity,
-        url: 'http://localhost:5000/api/reports/generateGeneral',
+        url: 'https://api-covia.okip.com.mx/api/reports/generateGeneral',
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
