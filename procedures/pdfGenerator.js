@@ -383,8 +383,25 @@ const analyzeDependencies = async (deviceNames, devicesData) => {
             const areaCode = parts[1].charAt(0);
             const vehicleType = parts[1].charAt(1);
             
-            const dependencyName = dependencyNames[areaCode] || `Dependencia ${areaCode}`;
+            const dependencyName = dependencyNames[areaCode] || 'Otros';
             const typeLabel = vehicleType === 'M' ? 'Motos' : 'Vehiculo';
+            
+            if (!dependenciesMap[dependencyName]) {
+                dependenciesMap[dependencyName] = {
+                    Motos: [],
+                    Vehiculo: []
+                };
+            }
+            
+            dependenciesMap[dependencyName][typeLabel].push({
+                name,
+                deviceId: deviceData.deviceId,
+                deviceData
+            });
+        } else {
+            // Si el nombre no tiene el formato esperado, también va a "Otros"
+            const dependencyName = 'Otros';
+            const typeLabel = 'Vehiculo'; // Por defecto, asumir que es vehículo
             
             if (!dependenciesMap[dependencyName]) {
                 dependenciesMap[dependencyName] = {
@@ -474,7 +491,7 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
                     total,
                     withMovement,
                     withoutMovement,
-                    totalKm: totalKm.toFixed(2),
+                    totalKm: totalKm.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                     alerts: alertTotals,
                     totalAlerts: grandTotalAlerts,
                     top5AlertsInfo: top5Alerts
@@ -518,7 +535,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 totalVehicles += typeData.total;
                 totalWithMovement += typeData.withMovement;
                 totalWithoutMovement += typeData.withoutMovement;
-                totalKm += parseFloat(typeData.totalKm);
+                totalKm += parseFloat(typeData.totalKm.replace(/,/g, ''));
                 grandTotalAlerts += typeData.totalAlerts;
                 
                 // Sumar alertas por posición
@@ -535,7 +552,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
             totalVehicles,
             totalWithMovement,
             totalWithoutMovement,
-            totalKm: totalKm.toFixed(2),
+            totalKm: totalKm.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
             totalAlertsArray,
             grandTotalAlerts
         };
