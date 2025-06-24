@@ -504,6 +504,45 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
     
     const top5Alerts = reportData.top5Alerts || [];
     
+    // Calcular totales generales
+    const calculateGeneralTotals = () => {
+        let totalVehicles = 0;
+        let totalWithMovement = 0;
+        let totalWithoutMovement = 0;
+        let totalKm = 0;
+        let totalAlertsArray = [0, 0, 0, 0, 0]; // Para las 5 alertas principales
+        let grandTotalAlerts = 0;
+        
+        reportData.forEach(dependency => {
+            dependency.types.forEach(typeData => {
+                totalVehicles += typeData.total;
+                totalWithMovement += typeData.withMovement;
+                totalWithoutMovement += typeData.withoutMovement;
+                totalKm += parseFloat(typeData.totalKm);
+                grandTotalAlerts += typeData.totalAlerts;
+                
+                // Sumar alertas por posición
+                for (let i = 0; i < 5; i++) {
+                    if (i < top5Alerts.length) {
+                        const alert = top5Alerts[i];
+                        totalAlertsArray[i] += typeData.alerts[alert.id] || 0;
+                    }
+                }
+            });
+        });
+        
+        return {
+            totalVehicles,
+            totalWithMovement,
+            totalWithoutMovement,
+            totalKm: totalKm.toFixed(2),
+            totalAlertsArray,
+            grandTotalAlerts
+        };
+    };
+    
+    const totals = calculateGeneralTotals();
+    
     const generateTableRows = () => {
         return reportData.map(dependency => {
             return dependency.types.map((typeData, index) => {
@@ -535,6 +574,25 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 `;
             }).join('');
         }).join('');
+    };
+    
+    const generateTotalsRow = () => {
+        const alertColumns = [];
+        for (let i = 0; i < 5; i++) {
+            alertColumns.push(`<td class="center totals-row">${totals.totalAlertsArray[i]}</td>`);
+        }
+        
+        return `
+            <tr class="totals-row-bg">
+                <td class="center totals-row" colspan="2"><strong>TOTALES</strong></td>
+                <td class="center totals-row"><strong>${totals.totalVehicles}</strong></td>
+                <td class="center totals-row"><strong>${totals.totalWithMovement}</strong></td>
+                <td class="center totals-row"><strong>${totals.totalWithoutMovement}</strong></td>
+                <td class="center totals-row"><strong>${totals.totalKm}</strong></td>
+                ${alertColumns.join('')}
+                <td class="center totals-row"><strong>${totals.grandTotalAlerts}</strong></td>
+            </tr>
+        `;
     };
     
     const CONTENT = `
@@ -634,6 +692,23 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 background-color: white;
             }
             
+            /* Estilos para la fila de totales */
+            .totals-row-bg {
+                background-color: #f8f9fa !important;
+                border-bottom: 2px solid #dee2e6 !important;
+            }
+            
+            .totals-row {
+                background-color: #f8f9fa !important;
+                color: #071952 !important;
+                font-weight: bold !important;
+                border: 1px solid #dee2e6 !important;
+                font-size: 12px !important;
+                padding: 10px 4px !important;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
             .legend {
                 margin-top: 20px;
                 font-size: 10px;
@@ -689,6 +764,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
             </thead>
             <tbody>
                 ${generateTableRows()}
+                ${generateTotalsRow()}
             </tbody>
         </table>
         
