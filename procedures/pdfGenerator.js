@@ -13,7 +13,6 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
 
     htmlPDF.setOptions(options)
 
-    // Verificar qué secciones están habilitadas
     const {
         route = true,
         chart = true,
@@ -21,7 +20,6 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         summary = true
     } = reportSections;
 
-    // Funciones para generar cada sección
     const generateRouteSection = () => {
         if (!route) return '';
         const hasCoordinates = device.coordinates && device.coordinates.length > 0;
@@ -117,7 +115,6 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         `;
     };
 
-    // Script del mapa (solo si la sección de ruta está habilitada)
     const generateMapScript = () => {
         if (!route || !device.coordinates || device.coordinates.length === 0) return '';
 
@@ -164,7 +161,6 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
     `;
     };
 
-    // Script de la gráfica (solo si la sección de gráfica está habilitada)
     const generateChartScript = () => {
         if (!chart || device.alerts.length === 0) return '';
         return `
@@ -232,7 +228,6 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         `;
     };
 
-    // Determinar qué librerías cargar según las secciones habilitadas
     const getRequiredLibraries = () => {
         let libraries = [];
 
@@ -248,7 +243,6 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         return libraries.join('\n        ');
     };
 
-    // Determinar qué estilos CSS cargar según las secciones habilitadas
     const getRequiredStyles = () => {
         let leafletCSS = '';
         let mapStyles = '';
@@ -350,3 +344,366 @@ export const mergePDFs = async (pdfBuffers) => {
 
     return mergedPDFBuffer
 }
+
+export const generateGeneralReport = async (devicesData, groupId, groupName, deviceNames, realFrom, realTo, authorization) => {
+    moment.locale('es')
+    
+    try {
+        const dependenciesMap = await analyzeDependencies(deviceNames, devicesData);
+        const reportData = await buildReportStructureFromService(dependenciesMap, devicesData);
+        const pdf = await generateGeneralPDF(reportData, groupName, realFrom, realTo);
+        return pdf;
+        
+    } catch (error) {
+        console.error('Error in generateGeneralReport:', error);
+        throw new Error(`Error generating general report: ${error.message}`);
+    }
+};
+
+const analyzeDependencies = async (deviceNames, devicesData) => {
+    const dependenciesMap = {};
+    const dependencyNames = {
+        'P': 'Policía Municipal',
+        'T': 'Tránsito', 
+        'F': 'Fiscalización',
+        'C': 'C4 Celaya',
+        'U': 'Turística y Comercial',
+        'I': 'Infopol',
+        'G': 'Género',
+        'K': 'Canina',
+        'S': 'SSC (Seguridad Ciudadana)',
+        'V': 'Protección Civil'
+    };
+    
+    deviceNames.forEach((name, index) => {
+        const deviceData = devicesData[index];
+        const parts = name.split('-');
+        
+        if (parts.length >= 3) {
+            const areaCode = parts[1].charAt(0);
+            const vehicleType = parts[1].charAt(1);
+            
+            const dependencyName = dependencyNames[areaCode] || `Dependencia ${areaCode}`;
+            const typeLabel = vehicleType === 'M' ? 'Motos' : 'Vehiculo';
+            
+            if (!dependenciesMap[dependencyName]) {
+                dependenciesMap[dependencyName] = {
+                    Motos: [],
+                    Vehiculo: []
+                };
+            }
+            
+            dependenciesMap[dependencyName][typeLabel].push({
+                name,
+                deviceId: deviceData.deviceId,
+                deviceData
+            });
+        }
+    });
+    
+    return dependenciesMap;
+};
+
+const buildReportStructureFromService = async (dependenciesMap, devicesData) => {
+    const reportStructure = [];
+    const globalAlertTotals = {};
+
+    devicesData.forEach(device => {
+        if (device.alerts && device.alerts.length > 0) {
+            device.alerts.forEach(alert => {
+                if (!globalAlertTotals[alert.id]) {
+                    globalAlertTotals[alert.id] = {
+                        id: alert.id,
+                        category: alert.category,
+                        total: 0
+                    };
+                }
+                globalAlertTotals[alert.id].total += alert.value || 0;
+            });
+        }
+    });
+    
+    const top5Alerts = Object.values(globalAlertTotals)
+        .filter(alert => alert.total > 0)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+    
+    Object.entries(dependenciesMap).forEach(([dependencyName, types]) => {
+        const dependencyData = {
+            name: dependencyName,
+            types: []
+        };
+        
+        // Procesar Motos y Vehículos
+        ['Motos', 'Vehiculo'].forEach(typeLabel => {
+            if (types[typeLabel] && types[typeLabel].length > 0) {
+                const devices = types[typeLabel];
+                const total = devices.length;
+                let withMovement = 0;
+                let withoutMovement = 0;
+                let totalKm = 0;
+                let alertTotals = {};
+                let grandTotalAlerts = 0;
+                
+                top5Alerts.forEach(alert => {
+                    alertTotals[alert.id] = 0;
+                });
+                
+                devices.forEach(device => {
+                    const deviceServiceData = devicesData.find(d => d.deviceId === device.deviceId);
+                    
+                    if (deviceServiceData?.hasMovement) {
+                        withMovement++;
+                        totalKm += deviceServiceData.mileage || 0;
+                        
+                        if (typeLabel === 'Vehiculo' && deviceServiceData.alerts) {
+                            deviceServiceData.alerts.forEach(alert => {
+                                if (alertTotals.hasOwnProperty(alert.id)) {
+                                    alertTotals[alert.id] += alert.value || 0;
+                                }
+                                grandTotalAlerts += alert.value || 0;
+                            });
+                        }
+                    } else {
+                        withoutMovement++;
+                    }
+                });
+                
+                dependencyData.types.push({
+                    type: typeLabel,
+                    total,
+                    withMovement,
+                    withoutMovement,
+                    totalKm: totalKm.toFixed(2),
+                    alerts: alertTotals,
+                    totalAlerts: grandTotalAlerts,
+                    top5AlertsInfo: top5Alerts
+                });
+            }
+        });
+        
+        if (dependencyData.types.length > 0) {
+            reportStructure.push(dependencyData);
+        }
+    });
+    
+    reportStructure.top5Alerts = top5Alerts;
+    
+    return reportStructure;
+};
+
+const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
+    const htmlPDF = new PuppeteerHTMLPDF();
+    const options = {
+        format: 'A4',
+        printBackground: true,
+        landscape: false
+    };
+    
+    htmlPDF.setOptions(options);
+    
+    const top5Alerts = reportData.top5Alerts || [];
+    
+    const generateTableRows = () => {
+        return reportData.map(dependency => {
+            return dependency.types.map((typeData, index) => {
+                const isFirstRow = index === 0;
+                const rowspanAttr = dependency.types.length > 1 && isFirstRow ? `rowspan="${dependency.types.length}"` : '';
+                
+                const alertColumns = [];
+                for (let i = 0; i < 5; i++) {
+                    if (i < top5Alerts.length) {
+                        const alert = top5Alerts[i];
+                        const alertValue = typeData.alerts[alert.id] || 0;
+                        alertColumns.push(`<td class="center">${alertValue}</td>`);
+                    } else {
+                        alertColumns.push(`<td class="center">0</td>`);
+                    }
+                }
+                
+                return `
+                    <tr>
+                        ${isFirstRow ? `<td ${rowspanAttr} class="dependency-cell">${dependency.name}</td>` : ''}
+                        <td>${typeData.type}</td>
+                        <td class="center">${typeData.total}</td>
+                        <td class="center">${typeData.withMovement}</td>
+                        <td class="center">${typeData.withoutMovement}</td>
+                        <td class="center">${typeData.totalKm}</td>
+                        ${alertColumns.join('')}
+                        <td class="center">${typeData.totalAlerts}</td>
+                    </tr>
+                `;
+            }).join('');
+        }).join('');
+    };
+    
+    const CONTENT = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Reporte General Vehicular</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+            
+            body {
+                margin: 15px 20px;
+            }
+            
+            .header {
+                margin-bottom: 20px;
+            }
+            
+            .header span {
+                display: block;
+            }
+            
+            .title {
+                font-size: 14px;
+                font-weight: bold;
+                text-decoration: underline;
+                margin-bottom: 5px;
+            }
+            
+            .subtitle {
+                font-size: 11px;
+                font-weight: bold;
+                margin-bottom: 2px;
+            }
+            
+            .date-info {
+                font-size: 11px;
+                margin-bottom: 2px;
+            }
+            
+            .separator {
+                background-color: #071952;
+                height: 2px;
+                margin: 10px 0 20px 0;
+            }
+            
+            .report-title {
+                font-size: 15px;
+                font-weight: bold;
+                margin-bottom: 15px;
+            }
+            
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+                margin-top: 10px;
+            }
+            
+            th {
+                background-color: #071952;
+                color: white;
+                padding: 8px 4px;
+                text-align: center;
+                font-weight: bold;
+                border: 1px solid #071952;
+            }
+            
+            td {
+                padding: 6px 4px;
+                border: 1px solid #ddd;
+                vertical-align: middle;
+            }
+            
+            .center {
+                text-align: center;
+            }
+            
+            .dependency-cell {
+                background-color: #f8f9fa;
+                font-weight: 600;
+                text-align: center;
+                vertical-align: middle;
+            }
+            
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            
+            tr:nth-child(odd) {
+                background-color: white;
+            }
+            
+            .legend {
+                margin-top: 20px;
+                font-size: 10px;
+                page-break-inside: avoid;
+            }
+            
+            .legend h4 {
+                margin-bottom: 10px;
+                font-size: 12px;
+                color: #071952;
+            }
+            
+            .legend p {
+                margin: 2px 0;
+                line-height: 1.4;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <span class="title">REPORTE GENERAL VEHICULAR</span>
+            <span class="subtitle">San Miguel de Allende, Gto.</span>
+            <span class="date-info">Los parámetros utilizados para el presente informe corresponden del</span>
+            <span class="date-info">
+                <u>${moment(realFrom).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al 
+                <u>${moment(realTo).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u>
+            </span>
+        </div>
+        
+        <div class="separator"></div>
+        
+        <h3 class="report-title">Reporte De Grupo: <u>${groupName}</u></h3>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2">Dependencia</th>
+                    <th rowspan="2">Vehículo</th>
+                    <th rowspan="2">Total</th>
+                    <th rowspan="2">Con movimiento</th>
+                    <th rowspan="2">Sin movimiento</th>
+                    <th rowspan="2">KM<br>Totales</th>
+                    <th colspan="6">Alertas</th>
+                </tr>
+                <tr>
+                    <th>1</th>
+                    <th>2</th>
+                    <th>3</th>
+                    <th>4</th>
+                    <th>5</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${generateTableRows()}
+            </tbody>
+        </table>
+        
+        ${top5Alerts.length > 0 ? `
+        <div class="legend">
+            <h4>Leyenda de Alertas (Alertas más frecuentes):</h4>
+            ${top5Alerts.map((alert, index) => 
+                `<p><strong>${index + 1}.</strong> ${alert.category} (Total: ${alert.total})</p>`
+            ).join('')}
+        </div>
+        ` : ''}
+    </body>
+    </html>
+    `;
+    
+    const PDF = await htmlPDF.create(CONTENT);
+    return PDF;
+};
