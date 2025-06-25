@@ -347,24 +347,47 @@ export const mergePDFs = async (pdfBuffers) => {
 
 export const generateGeneralReport = async (devicesData, groupId, groupName, deviceNames, realFrom, realTo, authorization) => {
     moment.locale('es')
-    
+
     try {
-        const dependenciesMap = await analyzeDependencies(deviceNames, devicesData);
+        // Pasar el groupId a analyzeDependencies
+        const dependenciesMap = await analyzeDependencies(deviceNames, devicesData, groupId, groupName);
         const reportData = await buildReportStructureFromService(dependenciesMap, devicesData);
         const pdf = await generateGeneralPDF(reportData, groupName, realFrom, realTo);
         return pdf;
-        
+
     } catch (error) {
         console.error('Error in generateGeneralReport:', error);
         throw new Error(`Error generating general report: ${error.message}`);
     }
 };
 
-const analyzeDependencies = async (deviceNames, devicesData) => {
+const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName) => {
     const dependenciesMap = {};
+
+    // Si el groupId es diferente de 16, usar el groupName como dependencia única
+    if (groupId !== 16) {
+        dependenciesMap[groupName] = {
+            Motos: [],
+            Vehiculo: []
+        };
+
+        // Agregar todos los dispositivos como vehículos bajo el groupName
+        deviceNames.forEach((name, index) => {
+            const deviceData = devicesData[index];
+            dependenciesMap[groupName].Vehiculo.push({
+                name,
+                deviceId: deviceData.deviceId,
+                deviceData
+            });
+        });
+
+        return dependenciesMap;
+    }
+
+    // Lógica original para groupId === 16
     const dependencyNames = {
         'P': 'Policía Municipal',
-        'T': 'Tránsito', 
+        'T': 'Tránsito',
         'F': 'Fiscalización',
         'C': 'C4 Celaya',
         'U': 'Turística y Comercial',
@@ -374,25 +397,25 @@ const analyzeDependencies = async (deviceNames, devicesData) => {
         'S': 'SSC (Seguridad Ciudadana)',
         'V': 'Protección Civil'
     };
-    
+
     deviceNames.forEach((name, index) => {
         const deviceData = devicesData[index];
         const parts = name.split('-');
-        
+
         if (parts.length >= 3) {
             const areaCode = parts[1].charAt(0);
             const vehicleType = parts[1].charAt(1);
-            
+
             const dependencyName = dependencyNames[areaCode] || 'Otros';
             const typeLabel = vehicleType === 'M' ? 'Motos' : 'Vehiculo';
-            
+
             if (!dependenciesMap[dependencyName]) {
                 dependenciesMap[dependencyName] = {
                     Motos: [],
                     Vehiculo: []
                 };
             }
-            
+
             dependenciesMap[dependencyName][typeLabel].push({
                 name,
                 deviceId: deviceData.deviceId,
@@ -402,14 +425,14 @@ const analyzeDependencies = async (deviceNames, devicesData) => {
             // Si el nombre no tiene el formato esperado, también va a "Otros"
             const dependencyName = 'Otros';
             const typeLabel = 'Vehiculo'; // Por defecto, asumir que es vehículo
-            
+
             if (!dependenciesMap[dependencyName]) {
                 dependenciesMap[dependencyName] = {
                     Motos: [],
                     Vehiculo: []
                 };
             }
-            
+
             dependenciesMap[dependencyName][typeLabel].push({
                 name,
                 deviceId: deviceData.deviceId,
@@ -417,7 +440,7 @@ const analyzeDependencies = async (deviceNames, devicesData) => {
             });
         }
     });
-    
+
     return dependenciesMap;
 };
 
@@ -439,18 +462,18 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
             });
         }
     });
-    
+
     const top5Alerts = Object.values(globalAlertTotals)
         .filter(alert => alert.total > 0)
         .sort((a, b) => b.total - a.total)
         .slice(0, 5);
-    
+
     Object.entries(dependenciesMap).forEach(([dependencyName, types]) => {
         const dependencyData = {
             name: dependencyName,
             types: []
         };
-        
+
         // Procesar Motos y Vehículos
         ['Motos', 'Vehiculo'].forEach(typeLabel => {
             if (types[typeLabel] && types[typeLabel].length > 0) {
@@ -461,18 +484,18 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
                 let totalKm = 0;
                 let alertTotals = {};
                 let grandTotalAlerts = 0;
-                
+
                 top5Alerts.forEach(alert => {
                     alertTotals[alert.id] = 0;
                 });
-                
+
                 devices.forEach(device => {
                     const deviceServiceData = devicesData.find(d => d.deviceId === device.deviceId);
-                    
+
                     if (deviceServiceData?.hasMovement) {
                         withMovement++;
                         totalKm += deviceServiceData.mileage || 0;
-                        
+
                         if (typeLabel === 'Vehiculo' && deviceServiceData.alerts) {
                             deviceServiceData.alerts.forEach(alert => {
                                 if (alertTotals.hasOwnProperty(alert.id)) {
@@ -485,7 +508,7 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
                         withoutMovement++;
                     }
                 });
-                
+
                 dependencyData.types.push({
                     type: typeLabel,
                     total,
@@ -498,14 +521,14 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
                 });
             }
         });
-        
+
         if (dependencyData.types.length > 0) {
             reportStructure.push(dependencyData);
         }
     });
-    
+
     reportStructure.top5Alerts = top5Alerts;
-    
+
     return reportStructure;
 };
 
@@ -516,11 +539,11 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
         printBackground: true,
         landscape: false
     };
-    
+
     htmlPDF.setOptions(options);
-    
+
     const top5Alerts = reportData.top5Alerts || [];
-    
+
     // Calcular totales generales
     const calculateGeneralTotals = () => {
         let totalVehicles = 0;
@@ -529,7 +552,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
         let totalKm = 0;
         let totalAlertsArray = [0, 0, 0, 0, 0]; // Para las 5 alertas principales
         let grandTotalAlerts = 0;
-        
+
         reportData.forEach(dependency => {
             dependency.types.forEach(typeData => {
                 totalVehicles += typeData.total;
@@ -537,7 +560,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 totalWithoutMovement += typeData.withoutMovement;
                 totalKm += parseFloat(typeData.totalKm.replace(/,/g, ''));
                 grandTotalAlerts += typeData.totalAlerts;
-                
+
                 // Sumar alertas por posición
                 for (let i = 0; i < 5; i++) {
                     if (i < top5Alerts.length) {
@@ -547,7 +570,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 }
             });
         });
-        
+
         return {
             totalVehicles,
             totalWithMovement,
@@ -557,15 +580,15 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
             grandTotalAlerts
         };
     };
-    
+
     const totals = calculateGeneralTotals();
-    
+
     const generateTableRows = () => {
         return reportData.map(dependency => {
             return dependency.types.map((typeData, index) => {
                 const isFirstRow = index === 0;
                 const rowspanAttr = dependency.types.length > 1 && isFirstRow ? `rowspan="${dependency.types.length}"` : '';
-                
+
                 const alertColumns = [];
                 for (let i = 0; i < 5; i++) {
                     if (i < top5Alerts.length) {
@@ -576,7 +599,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                         alertColumns.push(`<td class="center">0</td>`);
                     }
                 }
-                
+
                 return `
                     <tr>
                         ${isFirstRow ? `<td ${rowspanAttr} class="dependency-cell">${dependency.name}</td>` : ''}
@@ -592,13 +615,13 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
             }).join('');
         }).join('');
     };
-    
+
     const generateTotalsRow = () => {
         const alertColumns = [];
         for (let i = 0; i < 5; i++) {
             alertColumns.push(`<td class="center totals-row">${totals.totalAlertsArray[i]}</td>`);
         }
-        
+
         return `
             <tr class="totals-row-bg">
                 <td class="center totals-row" colspan="2"><strong>TOTALES</strong></td>
@@ -611,7 +634,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
             </tr>
         `;
     };
-    
+
     const CONTENT = `
     <!DOCTYPE html>
     <html>
@@ -788,15 +811,15 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
         ${top5Alerts.length > 0 ? `
         <div class="legend">
             <h4>Leyenda de Alertas (Alertas más frecuentes):</h4>
-            ${top5Alerts.map((alert, index) => 
-                `<p><strong>${index + 1}.</strong> ${alert.category} (Total: ${alert.total})</p>`
-            ).join('')}
+            ${top5Alerts.map((alert, index) =>
+        `<p><strong>${index + 1}.</strong> ${alert.category} (Total: ${alert.total})</p>`
+    ).join('')}
         </div>
         ` : ''}
     </body>
     </html>
     `;
-    
+
     const PDF = await htmlPDF.create(CONTENT);
     return PDF;
 };
