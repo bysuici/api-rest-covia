@@ -3,11 +3,12 @@ import dotenv from 'dotenv'
 
 export const getDevices = async (devices, from, to, token, realFrom, realTo, reportSections = {}) => {
     dotenv.config()
+    const url = process.env.DEVICES;
 
     const configDevices = {
         method: 'post',
         maxBodyLength: Infinity,
-        url: process.env.DEVICES,
+        url: `${url}/generate`,
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',

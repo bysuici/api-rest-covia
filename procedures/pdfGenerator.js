@@ -822,3 +822,266 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
     const PDF = await htmlPDF.create(CONTENT);
     return PDF;
 };
+
+export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSections = {}) => {
+    moment.locale('es')
+    const htmlPDF = new PuppeteerHTMLPDF()
+    const options = {
+        format: 'A4',
+        printBackground: true
+    }
+
+    htmlPDF.setOptions(options)
+
+    const {
+        route = true,
+        tableOfContents = true
+    } = reportSections;
+
+    const generateRouteSection = () => {
+        if (!route) return '';
+        const hasCoordinates = radio.coordinates && radio.coordinates.length > 0;
+
+        return `
+        <h3 class="font-bold mb-2 text-[15px]">Ruta Recorrida:</h3>
+        <div id="map" class="relative h-[400px] rounded-2xl overflow-hidden bg-gray-200">
+            ${!hasCoordinates
+                ? `<div class="absolute inset-0 flex items-center justify-center bg-gray-200 text-red-600 text-2xl font-bold">
+                      Sin Movimiento Registrado
+                   </div>`
+                : ''
+            }
+        </div>
+    `;
+    };
+
+    const generateTableOfContentsSection = () => {
+        if (!tableOfContents) return '';
+
+        const formatStatus = (status) => status ? 'Activo' : 'Inactivo';
+        const formatOnline = (online) => online ? 'En línea' : 'Desconectado';
+        const formatDate = (date) => {
+            if (!date) return 'N/A';
+            return moment(date).format('DD/MM/YYYY HH:mm:ss');
+        };
+
+        return `
+            <h3 class="font-bold my-2 text-[15px]">Información del Radio:</h3>
+            ${radio.radioInfo ? `
+                <table class="w-full text-[12px] mt-4" style="border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #071952; color: white;">
+                            <th style="padding: 10px; text-align: left; border: 1px solid #071952; font-weight: bold;">Parámetro</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #071952; font-weight: bold;">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: #f9f9f9;">
+                            <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: 600;">ID del Radio</td>
+                            <td style="padding: 8px 10px; border: 1px solid #ddd;">${radio.radioInfo.id}</td>
+                        </tr>
+                        <tr style="background: white;">
+                            <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: 600;">Nombre</td>
+                            <td style="padding: 8px 10px; border: 1px solid #ddd;">${radio.radioInfo.name || 'N/A'}</td>
+                        </tr>
+                        <tr style="background: #f9f9f9;">
+                            <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: 600;">Modelo</td>
+                            <td style="padding: 8px 10px; border: 1px solid #ddd;">${radio.radioInfo.model}</td>
+                        </tr>
+                        <tr style="background: white;">
+                            <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: 600;">Estado</td>
+                            <td style="padding: 8px 10px; border: 1px solid #ddd;">
+                                <span style="color: ${radio.radioInfo.status ? '#28a745' : '#dc3545'}; font-weight: 600;">
+                                    ${formatStatus(radio.radioInfo.status)}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr style="background: #f9f9f9;">
+                            <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: 600;">Conexión</td>
+                            <td style="padding: 8px 10px; border: 1px solid #ddd;">
+                                <span style="color: ${radio.radioInfo.online ? '#28a745' : '#dc3545'}; font-weight: 600;">
+                                    ${formatOnline(radio.radioInfo.online)}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr style="background: white;">
+                            <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: 600;">Tipo</td>
+                            <td style="padding: 8px 10px; border: 1px solid #ddd;">${radio.radioInfo.type}</td>
+                        </tr>
+                        <tr style="background: #f9f9f9;">
+                            <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: 600;">Última Actualización</td>
+                            <td style="padding: 8px 10px; border: 1px solid #ddd;">${formatDate(radio.radioInfo.lastUpdate)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            ` : '<p class="text-2xl h-[200px] flex items-center justify-center">No se encontró información del radio</p>'}
+        `;
+    };
+
+    const generateMapScript = () => {
+        if (!route || !radio.coordinates || radio.coordinates.length === 0) return '';
+
+        return `
+        <script>
+            var map = L.map('map', {
+                zoomControl: false,
+                zoomAnimation: false,
+                fadeAnimation: false,
+                markerZoomAnimation: false
+            });
+
+            var isSatelite = ${isSatelite};
+
+            if (isSatelite) {
+                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 18,
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+                });
+
+                const labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 18,
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+                });
+
+                L.layerGroup([satelliteLayer, labelsLayer]).addTo(map);
+            } else {
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+            }
+
+            var coordinates = ${JSON.stringify(radio.coordinates)};
+            if (coordinates.length > 1) {
+                var polyline = L.polyline(coordinates, { color: 'red', weight: 3 }).addTo(map);
+                var bounds = polyline.getBounds();
+                map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
+                
+                // Agregar marcadores de inicio y fin
+                if (coordinates.length > 0) {
+                    L.marker(coordinates[0], {
+                        icon: L.divIcon({
+                            className: 'custom-marker',
+                            html: '<div style="background: green; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 8]
+                        })
+                    }).addTo(map).bindPopup('Inicio');
+                    
+                    L.marker(coordinates[coordinates.length - 1], {
+                        icon: L.divIcon({
+                            className: 'custom-marker',
+                            html: '<div style="background: red; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 8]
+                        })
+                    }).addTo(map).bindPopup('Fin');
+                }
+            } else if (coordinates.length === 1) {
+                var marker = L.marker(coordinates[0], {
+                    icon: L.divIcon({
+                        className: 'custom-marker',
+                        html: '<div style="background: blue; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    })
+                }).addTo(map).bindPopup('Posición');
+                map.setView(coordinates[0], 14);
+            }
+        </script>
+    `;
+    };
+
+    const getRequiredStyles = () => {
+        let leafletCSS = '';
+        let mapStyles = '';
+
+        if (route) {
+            leafletCSS = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />';
+            mapStyles = `
+            #map {
+                height: 400px;
+                border-radius: 20px;
+                overflow: hidden;
+            }`;
+        }
+
+        return { leafletCSS, mapStyles };
+    };
+
+    const { leafletCSS, mapStyles } = getRequiredStyles();
+
+    const CONTENT = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Reporte de Radio</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        ${leafletCSS}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+            ${mapStyles}
+            
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                margin-top: 10px;
+            }
+            
+            th, td {
+                text-align: left;
+                border: 1px solid #ddd;
+            }
+            
+            th {
+                background-color: #071952;
+                color: white;
+                font-weight: bold;
+            }
+            
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            
+            tr:nth-child(odd) {
+                background-color: white;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div class="flex flex-col my-[15px] mx-[68px]">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex flex-col gap-0">
+                    <span class="text-[14px] font-bold underline">INFORME DE RADIO</span>
+                    <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
+                    <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
+                </div>
+            </div>
+            <div class="bg-[#071952] py-[2px] mb-2"></div>
+
+            <h3 class="font-bold mb-2 text-[15px]">Reporte De Radio: <u>${radio.name}</u></h3>
+            
+            ${generateTableOfContentsSection()}
+            ${generateRouteSection()}
+        </div>
+
+        <!-- Cargar librerías JavaScript -->
+        ${route ? '<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>' : ''}
+        
+        <!-- Scripts de inicialización -->
+        ${generateMapScript()}
+    </body>
+    </html>
+    `
+
+    const PDF = await htmlPDF.create(CONTENT)
+    return PDF
+}
