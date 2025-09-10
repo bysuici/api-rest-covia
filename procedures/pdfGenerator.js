@@ -445,27 +445,52 @@ const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName)
 
 const buildReportStructureFromService = async (dependenciesMap, devicesData) => {
     const reportStructure = [];
+
+    // IDs de alertas fijas que siempre queremos mostrar
+    const fixedAlertIds = [60, 62, 63, 64, 160, 169, 5, 69, 70];
+
+    // Crear estructura de alertas fijas con información básica
+    const fixedAlerts = fixedAlertIds.map(id => ({
+        id: id,
+        category: `Alerta ${id}`, // Puedes cambiar esto por nombres más descriptivos si los tienes
+        total: 0
+    }));
+
+    // Calcular totales globales para las alertas fijas
     const globalAlertTotals = {};
+    fixedAlertIds.forEach(id => {
+        globalAlertTotals[id] = {
+            id: id,
+            category: `Alerta ${id}`,
+            total: 0
+        };
+    });
 
     devicesData.forEach(device => {
         if (device.alerts && device.alerts.length > 0) {
             device.alerts.forEach(alert => {
-                if (!globalAlertTotals[alert.id]) {
-                    globalAlertTotals[alert.id] = {
-                        id: alert.id,
-                        category: alert.category,
-                        total: 0
-                    };
+                // Solo procesar las alertas que están en nuestra lista fija
+                if (fixedAlertIds.includes(alert.id)) {
+                    if (!globalAlertTotals[alert.id]) {
+                        globalAlertTotals[alert.id] = {
+                            id: alert.id,
+                            category: alert.category || `Alerta ${alert.id}`,
+                            total: 0
+                        };
+                    }
+                    globalAlertTotals[alert.id].total += alert.value || 0;
+                    globalAlertTotals[alert.id].category = alert.category || `Alerta ${alert.id}`;
                 }
-                globalAlertTotals[alert.id].total += alert.value || 0;
             });
         }
     });
 
-    const top5Alerts = Object.values(globalAlertTotals)
-        .filter(alert => alert.total > 0)
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 5);
+    // Actualizar fixedAlerts con la información real
+    const updatedFixedAlerts = fixedAlertIds.map(id => ({
+        id: id,
+        category: globalAlertTotals[id]?.category || `Alerta ${id}`,
+        total: globalAlertTotals[id]?.total || 0
+    }));
 
     Object.entries(dependenciesMap).forEach(([dependencyName, types]) => {
         const dependencyData = {
@@ -484,8 +509,9 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
                 let alertTotals = {};
                 let grandTotalAlerts = 0;
 
-                top5Alerts.forEach(alert => {
-                    alertTotals[alert.id] = 0;
+                // Inicializar alertTotals con las 9 alertas fijas
+                fixedAlertIds.forEach(id => {
+                    alertTotals[id] = 0;
                 });
 
                 devices.forEach(device => {
@@ -497,10 +523,14 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
 
                         if (typeLabel === 'Vehiculo' && deviceServiceData.alerts) {
                             deviceServiceData.alerts.forEach(alert => {
+                                // Solo contar las alertas que están en nuestra lista fija
                                 if (alertTotals.hasOwnProperty(alert.id)) {
                                     alertTotals[alert.id] += alert.value || 0;
                                 }
-                                grandTotalAlerts += alert.value || 0;
+                                // Solo sumar al gran total las alertas fijas
+                                if (fixedAlertIds.includes(alert.id)) {
+                                    grandTotalAlerts += alert.value || 0;
+                                }
                             });
                         }
                     } else {
@@ -516,7 +546,7 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
                     totalKm: totalKm.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                     alerts: alertTotals,
                     totalAlerts: grandTotalAlerts,
-                    top5AlertsInfo: top5Alerts
+                    fixedAlertsInfo: updatedFixedAlerts
                 });
             }
         });
@@ -526,7 +556,7 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
         }
     });
 
-    reportStructure.top5Alerts = top5Alerts;
+    reportStructure.fixedAlerts = updatedFixedAlerts;
 
     return reportStructure;
 };
@@ -541,7 +571,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
 
     htmlPDF.setOptions(options);
 
-    const top5Alerts = reportData.top5Alerts || [];
+    const fixedAlerts = reportData.fixedAlerts || [];
 
     // Calcular totales generales
     const calculateGeneralTotals = () => {
@@ -549,7 +579,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
         let totalWithMovement = 0;
         let totalWithoutMovement = 0;
         let totalKm = 0;
-        let totalAlertsArray = [0, 0, 0, 0, 0]; // Para las 5 alertas principales
+        let totalAlertsArray = [0, 0, 0, 0, 0, 0, 0, 0, 0]; // Para las 9 alertas fijas
         let grandTotalAlerts = 0;
 
         reportData.forEach(dependency => {
@@ -560,10 +590,10 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 totalKm += parseFloat(typeData.totalKm.replace(/,/g, ''));
                 grandTotalAlerts += typeData.totalAlerts;
 
-                // Sumar alertas por posición
-                for (let i = 0; i < 5; i++) {
-                    if (i < top5Alerts.length) {
-                        const alert = top5Alerts[i];
+                // Sumar alertas por posición (ahora son 9)
+                for (let i = 0; i < 9; i++) {
+                    if (i < fixedAlerts.length) {
+                        const alert = fixedAlerts[i];
                         totalAlertsArray[i] += typeData.alerts[alert.id] || 0;
                     }
                 }
@@ -589,9 +619,10 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 const rowspanAttr = dependency.types.length > 1 && isFirstRow ? `rowspan="${dependency.types.length}"` : '';
 
                 const alertColumns = [];
-                for (let i = 0; i < 5; i++) {
-                    if (i < top5Alerts.length) {
-                        const alert = top5Alerts[i];
+                // Cambiar a 9 alertas
+                for (let i = 0; i < 9; i++) {
+                    if (i < fixedAlerts.length) {
+                        const alert = fixedAlerts[i];
                         const alertValue = typeData.alerts[alert.id] || 0;
                         alertColumns.push(`<td class="center">${alertValue}</td>`);
                     } else {
@@ -617,7 +648,8 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
 
     const generateTotalsRow = () => {
         const alertColumns = [];
-        for (let i = 0; i < 5; i++) {
+        // Cambiar a 9 alertas
+        for (let i = 0; i < 9; i++) {
             alertColumns.push(`<td class="center totals-row">${totals.totalAlertsArray[i]}</td>`);
         }
 
@@ -693,21 +725,21 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
             table {
                 width: 100%;
                 border-collapse: collapse;
-                font-size: 11px;
+                font-size: 10px;
                 margin-top: 10px;
             }
             
             th {
                 background-color: #071952;
                 color: white;
-                padding: 8px 4px;
+                padding: 6px 3px;
                 text-align: center;
                 font-weight: bold;
                 border: 1px solid #071952;
             }
             
             td {
-                padding: 6px 4px;
+                padding: 4px 3px;
                 border: 1px solid #ddd;
                 vertical-align: middle;
             }
@@ -742,8 +774,8 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 color: #071952 !important;
                 font-weight: bold !important;
                 border: 1px solid #dee2e6 !important;
-                font-size: 12px !important;
-                padding: 10px 4px !important;
+                font-size: 11px !important;
+                padding: 8px 3px !important;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }
@@ -790,7 +822,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                     <th rowspan="2">Con movimiento</th>
                     <th rowspan="2">Sin movimiento</th>
                     <th rowspan="2">KM<br>Totales</th>
-                    <th colspan="6">Alertas</th>
+                    <th colspan="10">Alertas</th>
                 </tr>
                 <tr>
                     <th>1</th>
@@ -798,6 +830,10 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                     <th>3</th>
                     <th>4</th>
                     <th>5</th>
+                    <th>6</th>
+                    <th>7</th>
+                    <th>8</th>
+                    <th>9</th>
                     <th>Total</th>
                 </tr>
             </thead>
@@ -807,11 +843,11 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
             </tbody>
         </table>
         
-        ${top5Alerts.length > 0 ? `
+        ${fixedAlerts.length > 0 ? `
         <div class="legend">
-            <h4>Leyenda de Alertas (Alertas más frecuentes):</h4>
-            ${top5Alerts.map((alert, index) =>
-        `<p><strong>${index + 1}.</strong> ${alert.category} (Total: ${alert.total})</p>`
+            <h4>Leyenda de Alertas:</h4>
+            ${fixedAlerts.map((alert, index) =>
+        `<p><strong>${index + 1}.</strong> ${alert.category} (ID: ${alert.id}, Total: ${alert.total})</p>`
     ).join('')}
         </div>
         ` : ''}
