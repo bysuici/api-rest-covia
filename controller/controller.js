@@ -13,6 +13,7 @@ export const report = async (request, response) => {
         to,
         realTo,
         isSatelite = false,
+        icon,
         reportSections = {
             route: true,
             chart: true,
@@ -42,7 +43,7 @@ export const report = async (request, response) => {
 
                 try {
                     for (const device of devicesData.data) {
-                        const pdf = await pdfGenerator(device, realFrom, realTo, isSatelite, reportSections)
+                        const pdf = await pdfGenerator(device, realFrom, realTo, isSatelite, reportSections, icon)
                         pdfs.push(pdf)
                     }
                 } catch (error) {

@@ -3,7 +3,7 @@ import PDFMerger from 'pdf-merger-js'
 import moment from 'moment'
 import { alerts } from '../utils/utils.js'
 
-export const pdfGenerator = async (device, from, to, isSatelite, reportSections = {}) => {
+export const pdfGenerator = async (device, from, to, isSatelite, reportSections = {}, icon) => {
     moment.locale('es')
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {
@@ -324,7 +324,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
                         <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                     </div>
                     <div>
-                        <img src="https://res.cloudinary.com/dfvro9k4k/image/upload/v1736532408/Covia/hhukhjekxej4eowsueiu.png" width="40" height="40">
+                        <img src="${icon}" width="40" height="40">
                     </div>
                 </div>
                 <div class="bg-[#071952] py-[2px] mb-2"></div>
@@ -861,7 +861,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                     </span>
                 </div>
             <div class="header-right">
-                <img src="https://res.cloudinary.com/dfvro9k4k/image/upload/v1736532408/Covia/hhukhjekxej4eowsueiu.png" width="40" height="40">
+                <img src="${icon}" width="40" height="40">
             </div>
         </div>
             
@@ -1194,7 +1194,7 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
                         <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                     </div>
                     <div>
-                        <img src="https://res.cloudinary.com/dfvro9k4k/image/upload/v1736532408/Covia/hhukhjekxej4eowsueiu.png" width="40" height="40">
+                        <img src="${icon}" width="40" height="40">
                     </div>
                 </div>
                 <div class="bg-[#071952] py-[2px] mb-2"></div>
