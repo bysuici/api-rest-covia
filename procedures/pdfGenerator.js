@@ -3,13 +3,21 @@ import PDFMerger from 'pdf-merger-js'
 import moment from 'moment'
 import { alerts } from '../utils/utils.js'
 
-export const pdfGenerator = async (device, from, to, isSatelite, reportSections = {}) => {
+export const pdfGenerator = async (device, from, to, isSatelite, reportSections = {}, icon) => {
     moment.locale('es')
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {
         format: 'A4',
-        printBackground: true
-    }
+        printBackground: true,
+        preferCSSPageSize: true,
+        displayHeaderFooter: false,
+        margin: {
+            top: '0',
+            bottom: '0',
+            left: '0',
+            right: '0'
+        }
+    };
 
     htmlPDF.setOptions(options)
 
@@ -228,21 +236,6 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         `;
     };
 
-    const getRequiredLibraries = () => {
-        let libraries = [];
-
-        if (route) {
-            libraries.push('<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>');
-        }
-
-        if (chart && device.alerts.length > 0) {
-            libraries.push('<script src="https://cdn.amcharts.com/lib/5/index.js"></script>');
-            libraries.push('<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>');
-        }
-
-        return libraries.join('\n        ');
-    };
-
     const getRequiredStyles = () => {
         let leafletCSS = '';
         let mapStyles = '';
@@ -282,41 +275,78 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            *{
+            * {
                 margin: 0;
                 padding: 0;
                 font-family: Arial, Helvetica, sans-serif;
             }
+            
+            body {
+                background-image: url('https://res.cloudinary.com/dfvro9k4k/image/upload/v1757617598/okip_uma4qs.png');
+                background-size: 100% auto; /* Cambiado de 'cover' a '100% auto' */
+                background-position: top center; /* Cambiado de 'center' a 'top center' */
+                background-repeat: repeat;
+                background-attachment: scroll; /* Cambiado de 'fixed' a 'scroll' */
+                height: auto; /* Cambiado de 'min-height: 100vh' a 'height: auto' */
+                padding-bottom: 0; /* Reducido de 80px a 0 */
+                position: relative;
+                margin: 0;
+                padding: 0;
+            }
+            
+            
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background-color: #071952;
+                color: white;
+                text-align: center;
+                padding: 15px 0;
+                font-size: 14px;
+                font-weight: bold;
+                z-index: 1000;
+                letter-spacing: 0.5px;
+            }
+            
             ${mapStyles}
             ${chartStyles}
         </style>
     </head>
     <body>
-
-        <div class="flex flex-col my-[15px] mx-[68px]">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex flex-col gap-0">
-                    <span class="text-[14px] font-bold underline">INFORME GENERAL</span>
-                    <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
-                    <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
+        <div class="content-wrapper">
+            <div class="flex flex-col my-[15px] mx-[68px]">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex flex-col gap-0">
+                        <span class="text-[14px] font-bold underline">INFORME GENERAL</span>
+                        <span class="text-[11px]">Los parÃ¡metros utilizados para el presente informe corresponden del</span>
+                        <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
+                    </div>
+                    <div>
+                        <img src="${icon}" width="40" height="40">
+                    </div>
                 </div>
-            </div>
-            <div class="bg-[#071952] py-[2px] mb-2"></div>
+                <div class="bg-[#071952] py-[2px] mb-2"></div>
 
-            <h3 class="font-bold mb-2 text-[15px]">Reporte De Unidad: <u>${device.summary.name}</u></h3>
-            
-            ${generateRouteSection()}
-            ${generateChartSection()}
-            ${generateAlertsSection()}
-            ${generateSummarySection()}
+                <h3 class="font-bold mb-2 text-[15px]">Reporte De Unidad: <u>${device.summary.name}</u></h3>
+                
+                ${generateRouteSection()}
+                ${generateChartSection()}
+                ${generateAlertsSection()}
+                ${generateSummarySection()}
+            </div>
         </div>
 
-        <!-- Cargar librerías JavaScript -->
+        <!-- Footer -->
+        <div class="footer">
+            OKIP "Inteligencia Mexicana al Servicio de la Nación"
+        </div>
+
         ${route ? '<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>' : ''}
         ${(chart && device.alerts.length > 0) ? '<script src="https://cdn.amcharts.com/lib/5/index.js"></script>' : ''}
         ${(chart && device.alerts.length > 0) ? '<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>' : ''}
         
-        <!-- Scripts de inicialización -->
         ${generateMapScript()}
         ${generateChartScript()}
     </body>
@@ -348,7 +378,6 @@ export const generateGeneralReport = async (devicesData, groupId, groupName, dev
     moment.locale('es')
 
     try {
-        // Pasar el groupId a analyzeDependencies
         const dependenciesMap = await analyzeDependencies(deviceNames, devicesData, groupId, groupName);
         const reportData = await buildReportStructureFromService(dependenciesMap, devicesData);
         const pdf = await generateGeneralPDF(reportData, groupName, realFrom, realTo);
@@ -363,14 +392,12 @@ export const generateGeneralReport = async (devicesData, groupId, groupName, dev
 const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName) => {
     const dependenciesMap = {};
 
-    // Si el groupId es diferente de 16, usar el groupName como dependencia única
     if (groupId !== 16) {
         dependenciesMap[groupName] = {
             Motos: [],
             Vehiculo: []
         };
 
-        // Agregar todos los dispositivos como vehículos bajo el groupName
         deviceNames.forEach((name, index) => {
             const deviceData = devicesData[index];
             dependenciesMap[groupName].Vehiculo.push({
@@ -383,7 +410,6 @@ const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName)
         return dependenciesMap;
     }
 
-    // Lógica original para groupId === 16
     const dependencyNames = {
         'P': 'Policía Municipal',
         'T': 'Tránsito',
@@ -421,9 +447,8 @@ const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName)
                 deviceData
             });
         } else {
-            // Si el nombre no tiene el formato esperado, también va a "Otros"
             const dependencyName = 'Otros';
-            const typeLabel = 'Vehiculo'; // Por defecto, asumir que es vehículo
+            const typeLabel = 'Vehiculo';
 
             if (!dependenciesMap[dependencyName]) {
                 dependenciesMap[dependencyName] = {
@@ -445,18 +470,7 @@ const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName)
 
 const buildReportStructureFromService = async (dependenciesMap, devicesData) => {
     const reportStructure = [];
-
-    // IDs de alertas fijas que siempre queremos mostrar
     const fixedAlertIds = [60, 62, 63, 64, 160, 169, 5, 69, 70];
-
-    // Crear estructura de alertas fijas con información básica
-    const fixedAlerts = fixedAlertIds.map(id => ({
-        id: id,
-        category: `Alerta ${id}`, // Puedes cambiar esto por nombres más descriptivos si los tienes
-        total: 0
-    }));
-
-    // Calcular totales globales para las alertas fijas
     const globalAlertTotals = {};
     fixedAlertIds.forEach(id => {
         globalAlertTotals[id] = {
@@ -469,7 +483,6 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
     devicesData.forEach(device => {
         if (device.alerts && device.alerts.length > 0) {
             device.alerts.forEach(alert => {
-                // Solo procesar las alertas que están en nuestra lista fija
                 if (fixedAlertIds.includes(alert.id)) {
                     if (!globalAlertTotals[alert.id]) {
                         globalAlertTotals[alert.id] = {
@@ -485,7 +498,6 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
         }
     });
 
-    // Actualizar fixedAlerts con la información real
     const updatedFixedAlerts = fixedAlertIds.map(id => ({
         id: id,
         category: globalAlertTotals[id]?.category || `Alerta ${id}`,
@@ -498,7 +510,6 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
             types: []
         };
 
-        // Procesar Motos y Vehículos
         ['Motos', 'Vehiculo'].forEach(typeLabel => {
             if (types[typeLabel] && types[typeLabel].length > 0) {
                 const devices = types[typeLabel];
@@ -509,7 +520,6 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
                 let alertTotals = {};
                 let grandTotalAlerts = 0;
 
-                // Inicializar alertTotals con las 9 alertas fijas
                 fixedAlertIds.forEach(id => {
                     alertTotals[id] = 0;
                 });
@@ -523,11 +533,9 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
 
                         if (typeLabel === 'Vehiculo' && deviceServiceData.alerts) {
                             deviceServiceData.alerts.forEach(alert => {
-                                // Solo contar las alertas que están en nuestra lista fija
                                 if (alertTotals.hasOwnProperty(alert.id)) {
                                     alertTotals[alert.id] += alert.value || 0;
                                 }
-                                // Solo sumar al gran total las alertas fijas
                                 if (fixedAlertIds.includes(alert.id)) {
                                     grandTotalAlerts += alert.value || 0;
                                 }
@@ -572,14 +580,12 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
     htmlPDF.setOptions(options);
 
     const fixedAlerts = reportData.fixedAlerts || [];
-
-    // Calcular totales generales
     const calculateGeneralTotals = () => {
         let totalVehicles = 0;
         let totalWithMovement = 0;
         let totalWithoutMovement = 0;
         let totalKm = 0;
-        let totalAlertsArray = [0, 0, 0, 0, 0, 0, 0, 0, 0]; // Para las 9 alertas fijas
+        let totalAlertsArray = [0, 0, 0, 0, 0, 0, 0, 0, 0];
         let grandTotalAlerts = 0;
 
         reportData.forEach(dependency => {
@@ -590,7 +596,6 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 totalKm += parseFloat(typeData.totalKm.replace(/,/g, ''));
                 grandTotalAlerts += typeData.totalAlerts;
 
-                // Sumar alertas por posición (ahora son 9)
                 for (let i = 0; i < 9; i++) {
                     if (i < fixedAlerts.length) {
                         const alert = fixedAlerts[i];
@@ -619,7 +624,6 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 const rowspanAttr = dependency.types.length > 1 && isFirstRow ? `rowspan="${dependency.types.length}"` : '';
 
                 const alertColumns = [];
-                // Cambiar a 9 alertas
                 for (let i = 0; i < 9; i++) {
                     if (i < fixedAlerts.length) {
                         const alert = fixedAlerts[i];
@@ -648,7 +652,6 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
 
     const generateTotalsRow = () => {
         const alertColumns = [];
-        // Cambiar a 9 alertas
         for (let i = 0; i < 9; i++) {
             alertColumns.push(`<td class="center totals-row">${totals.totalAlertsArray[i]}</td>`);
         }
@@ -681,13 +684,56 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
             }
             
             body {
-                margin: 15px 20px;
+                background-image: url('https://res.cloudinary.com/dfvro9k4k/image/upload/v1757617598/okip_uma4qs.png');
+                background-size: 100% auto;
+                background-position: top center;
+                background-repeat: repeat;
+                background-attachment: scroll;
+                height: auto;
+                padding-bottom: 0;
+                position: relative;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .content-wrapper {
+                background-color: rgba(255, 255, 255, 0.1);
+                min-height: calc(100vh - 80px);
+                padding: 15px 20px;
+                position: relative;
+                z-index: 1;
+            }
+            
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background-color: #071952;
+                color: white;
+                text-align: center;
+                padding: 15px 0;
+                font-size: 14px;
+                font-weight: bold;
+                z-index: 1000;
+                letter-spacing: 0.5px;
             }
             
             .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
                 margin-bottom: 20px;
             }
-            
+
+            .header-left {
+                text-align: left;
+            }
+
+            .header-right img {
+                display: block;
+            }
+
             .header span {
                 display: block;
             }
@@ -727,6 +773,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 border-collapse: collapse;
                 font-size: 10px;
                 margin-top: 10px;
+                background-color: white;
             }
             
             th {
@@ -742,6 +789,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 padding: 4px 3px;
                 border: 1px solid #ddd;
                 vertical-align: middle;
+                background-color: white;
             }
             
             .center {
@@ -755,11 +803,11 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 vertical-align: middle;
             }
             
-            tr:nth-child(even) {
+            tr:nth-child(even) td {
                 background-color: #f9f9f9;
             }
             
-            tr:nth-child(odd) {
+            tr:nth-child(odd) td {
                 background-color: white;
             }
             
@@ -784,6 +832,9 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
                 margin-top: 20px;
                 font-size: 10px;
                 page-break-inside: avoid;
+                background-color: rgba(255, 255, 255, 0.9);
+                padding: 15px;
+                border-radius: 5px;
             }
             
             .legend h4 {
@@ -799,58 +850,68 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
         </style>
     </head>
     <body>
-        <div class="header">
-            <span class="title">REPORTE GENERAL VEHICULAR</span>
-            <span class="subtitle">San Miguel de Allende, Gto.</span>
-            <span class="date-info">Los parámetros utilizados para el presente informe corresponden del</span>
-            <span class="date-info">
-                <u>${moment(realFrom).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al 
-                <u>${moment(realTo).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u>
-            </span>
+        <div class="content-wrapper">
+            <div class="header">
+                <div class="header-left">
+                    <span class="title">REPORTE GENERAL VEHICULAR</span>
+                    <span class="date-info">Los parámetros utilizados para el presente informe corresponden del</span>
+                    <span class="date-info">
+                        <u>${moment(realFrom).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al 
+                        <u>${moment(realTo).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u>
+                    </span>
+                </div>
+            <div class="header-right">
+                <img src="${icon}" width="40" height="40">
+            </div>
         </div>
-        
-        <div class="separator"></div>
-        
-        <h3 class="report-title">Reporte De Grupo: <u>${groupName}</u></h3>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th rowspan="2">Dependencia</th>
-                    <th rowspan="2">Vehículo</th>
-                    <th rowspan="2">Total</th>
-                    <th rowspan="2">Con movimiento</th>
-                    <th rowspan="2">Sin movimiento</th>
-                    <th rowspan="2">KM<br>Totales</th>
-                    <th colspan="10">Alertas</th>
-                </tr>
-                <tr>
-                    <th>1</th>
-                    <th>2</th>
-                    <th>3</th>
-                    <th>4</th>
-                    <th>5</th>
-                    <th>6</th>
-                    <th>7</th>
-                    <th>8</th>
-                    <th>9</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${generateTableRows()}
-                ${generateTotalsRow()}
-            </tbody>
-        </table>
-        
-        ${fixedAlerts.length > 0 ? `
-        <div class="legend">
-            <h4>Leyenda de Alertas:</h4>
-            ${fixedAlerts.map((alert, index) =>
+            
+            <div class="separator"></div>
+            
+            <h3 class="report-title">Reporte De Grupo: <u>${groupName}</u></h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">Dependencia</th>
+                        <th rowspan="2">Vehículo</th>
+                        <th rowspan="2">Total</th>
+                        <th rowspan="2">Con movimiento</th>
+                        <th rowspan="2">Sin movimiento</th>
+                        <th rowspan="2">KM<br>Totales</th>
+                        <th colspan="10">Alertas</th>
+                    </tr>
+                    <tr>
+                        <th>1</th>
+                        <th>2</th>
+                        <th>3</th>
+                        <th>4</th>
+                        <th>5</th>
+                        <th>6</th>
+                        <th>7</th>
+                        <th>8</th>
+                        <th>9</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${generateTableRows()}
+                    ${generateTotalsRow()}
+                </tbody>
+            </table>
+            
+            ${fixedAlerts.length > 0 ? `
+            <div class="legend">
+                <h4>Leyenda de Alertas:</h4>
+                ${fixedAlerts.map((alert, index) =>
         `<p><strong>${index + 1}.</strong> ${alert.category} (ID: ${alert.id}, Total: ${alert.total})</p>`
     ).join('')}
+            </div>
+            ` : ''}
         </div>
-        ` : ''}
+
+        <div class="footer">
+            OKIP "Inteligencia Mexicana al Servicio de la Nación"
+        </div>
     </body>
     </html>
     `;
@@ -1063,17 +1124,49 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
                 padding: 0;
                 font-family: Arial, Helvetica, sans-serif;
             }
+            
+            body {
+                background-image: url('https://res.cloudinary.com/dfvro9k4k/image/upload/v1757617598/okip_uma4qs.png');
+                background-size: 100% auto;
+                background-position: top center;
+                background-repeat: repeat;
+                background-attachment: scroll;
+                height: auto;
+                padding-bottom: 0;
+                position: relative;
+                margin: 0;
+                padding: 0;
+            }
+            
+            
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background-color: #071952;
+                color: white;
+                text-align: center;
+                padding: 15px 0;
+                font-size: 14px;
+                font-weight: bold;
+                z-index: 1000;
+                letter-spacing: 0.5px;
+            }
+            
             ${mapStyles}
             
             table {
                 border-collapse: collapse;
                 width: 100%;
                 margin-top: 10px;
+                background-color: white;
             }
             
             th, td {
                 text-align: left;
                 border: 1px solid #ddd;
+                background-color: white;
             }
             
             th {
@@ -1082,37 +1175,43 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
                 font-weight: bold;
             }
             
-            tr:nth-child(even) {
+            tr:nth-child(even) td {
                 background-color: #f9f9f9;
             }
             
-            tr:nth-child(odd) {
+            tr:nth-child(odd) td {
                 background-color: white;
             }
         </style>
     </head>
     <body>
-
-        <div class="flex flex-col my-[15px] mx-[68px]">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex flex-col gap-0">
-                    <span class="text-[14px] font-bold underline">INFORME DE RADIO</span>
-                    <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
-                    <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
+        <div class="content-wrapper">
+            <div class="flex flex-col my-[15px] mx-[68px]">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex flex-col gap-0">
+                        <span class="text-[14px] font-bold underline">INFORME DE RADIO</span>
+                        <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
+                        <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
+                    </div>
+                    <div>
+                        <img src="${icon}" width="40" height="40">
+                    </div>
                 </div>
-            </div>
-            <div class="bg-[#071952] py-[2px] mb-2"></div>
+                <div class="bg-[#071952] py-[2px] mb-2"></div>
 
-            <h3 class="font-bold mb-2 text-[15px]">Reporte De Radio: <u>${radio.name}</u></h3>
-            
-            ${generateTableOfContentsSection()}
-            ${generateRouteSection()}
+                <h3 class="font-bold mb-2 text-[15px]">Reporte De Radio: <u>${radio.name}</u></h3>
+                
+                ${generateTableOfContentsSection()}
+                ${generateRouteSection()}
+            </div>
         </div>
 
-        <!-- Cargar librerías JavaScript -->
+        <div class="footer">
+            OKIP "Inteligencia Mexicana al Servicio de la Nación"
+        </div>
+
         ${route ? '<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>' : ''}
         
-        <!-- Scripts de inicialización -->
         ${generateMapScript()}
     </body>
     </html>
