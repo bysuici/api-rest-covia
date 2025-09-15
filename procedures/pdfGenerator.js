@@ -374,13 +374,13 @@ export const mergePDFs = async (pdfBuffers) => {
     return mergedPDFBuffer
 }
 
-export const generateGeneralReport = async (devicesData, groupId, groupName, deviceNames, realFrom, realTo, authorization) => {
+export const generateGeneralReport = async (devicesData, groupId, groupName, deviceNames, realFrom, realTo, authorization, icon) => {
     moment.locale('es')
 
     try {
         const dependenciesMap = await analyzeDependencies(deviceNames, devicesData, groupId, groupName);
         const reportData = await buildReportStructureFromService(dependenciesMap, devicesData);
-        const pdf = await generateGeneralPDF(reportData, groupName, realFrom, realTo);
+        const pdf = await generateGeneralPDF(reportData, groupName, realFrom, realTo, icon);
         return pdf;
 
     } catch (error) {
@@ -569,7 +569,7 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
     return reportStructure;
 };
 
-const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
+const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon) => {
     const htmlPDF = new PuppeteerHTMLPDF();
     const options = {
         format: 'A4',
@@ -920,7 +920,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo) => {
     return PDF;
 };
 
-export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSections = {}) => {
+export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSections = {}, icon) => {
     moment.locale('es')
     const htmlPDF = new PuppeteerHTMLPDF()
     const options = {

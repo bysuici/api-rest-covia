@@ -89,6 +89,7 @@ export const reportGeneral = async (request, response) => {
         realFrom,
         to,
         realTo,
+        icon,
         groupId,
         groupName,
         deviceNames
@@ -106,7 +107,7 @@ export const reportGeneral = async (request, response) => {
         case true:
             try {
                 const devicesData = await getDevicesGeneral(devices, from, to, authorization, realFrom, realTo, deviceNames, groupId, groupName)
-                const generalReportPDF = await generateGeneralReport(devicesData.data, groupId, groupName, deviceNames, realFrom, realTo, authorization)
+                const generalReportPDF = await generateGeneralReport(devicesData.data, groupId, groupName, deviceNames, realFrom, realTo, authorization, icon)
                 const filename = `reporte-general-${groupName.replace(/\s+/g, '-').toLowerCase()}.pdf`
                 response.setHeader('Content-Type', 'application/pdf')
                 response.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
@@ -140,6 +141,7 @@ export const reportRadio = async (request, response) => {
         from,
         to,
         isSatelite = false,
+        icon,
         reportSections = {
             route: true,
             tableOfContents: true
@@ -167,7 +169,7 @@ export const reportRadio = async (request, response) => {
 
                 try {
                     for (const radio of radiosData.data) {
-                        const pdf = await radioPdfGenerator(radio, from, to, isSatelite, reportSections)
+                        const pdf = await radioPdfGenerator(radio, from, to, isSatelite, reportSections, icon)
                         pdfs.push(pdf)
                     }
                 } catch (error) {
