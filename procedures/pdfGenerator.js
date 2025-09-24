@@ -87,33 +87,33 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         };
 
         return `
-            <h3 class="font-bold mt-6 mb-4 text-[15px] text-[#071952]">Resumen de Combustible</h3> 
+            <h3 class="font-bold mt-6 mb-4 text-[15px] text-[#66192e]">Resumen de Combustible</h3> 
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                     <thead>
-                        <tr style="background: #071952; color: white;">
-                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; border: 1px solid #071952;">Parametros</th>
-                            <th style="padding: 12px 15px; text-align: center; font-weight: 600; border: 1px solid #071952;">Valor</th>
-                            <th style="padding: 12px 15px; text-align: center; font-weight: 600; border: 1px solid #071952;">Unidad</th>
+                        <tr style="background: #66192e; color: white;">
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; border: 1px solid #66192e;">Parametros</th>
+                            <th style="padding: 12px 15px; text-align: center; font-weight: 600; border: 1px solid #66192e;">Valor</th>
+                            <th style="padding: 12px 15px; text-align: center; font-weight: 600; border: 1px solid #66192e;">Unidad</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr style="background: white;">
                             <td style="padding: 12px 15px; border: 1px solid #dee2e6; font-weight: 500;">Distancia Recorrida</td>
-                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #071952;">
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #66192e;">
                                 ${safeValue(device.summary.kilometers_traveled)}
                             </td>
                             <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center;">km</td>
                         </tr>
                         <tr style="background: #f8f9fa;">
                             <td style="padding: 12px 15px; border: 1px solid #dee2e6; font-weight: 500;">Rendimiento</td>
-                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #071952;">
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #66192e;">
                                 ${safeValue(device.summary.km_per_liter)}
                             </td>
                             <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center;">km/litro</td>
                         </tr>
                         <tr style="background: white;">
                             <td style="padding: 12px 15px; border: 1px solid #dee2e6; font-weight: 500;">Combustible Gastado</td>
-                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #071952;">
+                            <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center; font-weight: 600; color: #66192e;">
                                 ${safeValue(device.summary.spent_gas)}
                             </td>
                             <td style="padding: 12px 15px; border: 1px solid #dee2e6; text-align: center;">Litros</td>
@@ -282,7 +282,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             }
             
             body {
-                background-image: url('https://res.cloudinary.com/dfvro9k4k/image/upload/v1757617598/okip_uma4qs.png');
+                background-image: url('');
                 background-size: 100% auto; /* Cambiado de 'cover' a '100% auto' */
                 background-position: top center; /* Cambiado de 'center' a 'top center' */
                 background-repeat: repeat;
@@ -300,7 +300,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background-color: #071952;
+                background-color: #66192e;
                 color: white;
                 text-align: center;
                 padding: 15px 0;
@@ -327,7 +327,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
                         <img src="${icon}" width="40" height="40">
                     </div>
                 </div>
-                <div class="bg-[#071952] py-[2px] mb-2"></div>
+                <div class="bg-[#66192e] py-[2px] mb-2"></div>
 
                 <h3 class="font-bold mb-2 text-[15px]">Reporte De Unidad: <u>${device.summary.name}</u></h3>
                 
@@ -684,7 +684,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon)
             }
             
             body {
-                background-image: url('https://res.cloudinary.com/dfvro9k4k/image/upload/v1757617598/okip_uma4qs.png');
+                background-image: url('');
                 background-size: 100% auto;
                 background-position: top center;
                 background-repeat: repeat;
@@ -709,7 +709,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon)
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background-color: #071952;
+                background-color: #66192e;
                 color: white;
                 text-align: center;
                 padding: 15px 0;
@@ -757,7 +757,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon)
             }
             
             .separator {
-                background-color: #071952;
+                background-color: #66192e;
                 height: 2px;
                 margin: 10px 0 20px 0;
             }
@@ -777,12 +777,12 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon)
             }
             
             th {
-                background-color: #071952;
+                background-color: #66192e;
                 color: white;
                 padding: 6px 3px;
                 text-align: center;
                 font-weight: bold;
-                border: 1px solid #071952;
+                border: 1px solid #66192e;
             }
             
             td {
@@ -819,7 +819,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon)
             
             .totals-row {
                 background-color: #f8f9fa !important;
-                color: #071952 !important;
+                color: #66192e !important;
                 font-weight: bold !important;
                 border: 1px solid #dee2e6 !important;
                 font-size: 11px !important;
@@ -840,7 +840,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon)
             .legend h4 {
                 margin-bottom: 10px;
                 font-size: 12px;
-                color: #071952;
+                color: #66192e;
             }
             
             .legend p {
@@ -967,9 +967,9 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
             ${radio.radioInfo ? `
                 <table class="w-full text-[12px] mt-4" style="border-collapse: collapse;">
                     <thead>
-                        <tr style="background: #071952; color: white;">
-                            <th style="padding: 10px; text-align: left; border: 1px solid #071952; font-weight: bold;">Parámetro</th>
-                            <th style="padding: 10px; text-align: left; border: 1px solid #071952; font-weight: bold;">Valor</th>
+                        <tr style="background: #66192e; color: white;">
+                            <th style="padding: 10px; text-align: left; border: 1px solid #66192e; font-weight: bold;">Parámetro</th>
+                            <th style="padding: 10px; text-align: left; border: 1px solid #66192e; font-weight: bold;">Valor</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1126,7 +1126,7 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
             }
             
             body {
-                background-image: url('https://res.cloudinary.com/dfvro9k4k/image/upload/v1757617598/okip_uma4qs.png');
+                background-image: url('');
                 background-size: 100% auto;
                 background-position: top center;
                 background-repeat: repeat;
@@ -1144,7 +1144,7 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background-color: #071952;
+                background-color: #66192e;
                 color: white;
                 text-align: center;
                 padding: 15px 0;
@@ -1170,7 +1170,7 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
             }
             
             th {
-                background-color: #071952;
+                background-color: #66192e;
                 color: white;
                 font-weight: bold;
             }
@@ -1197,7 +1197,7 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
                         <img src="${icon}" width="40" height="40">
                     </div>
                 </div>
-                <div class="bg-[#071952] py-[2px] mb-2"></div>
+                <div class="bg-[#66192e] py-[2px] mb-2"></div>
 
                 <h3 class="font-bold mb-2 text-[15px]">Reporte De Radio: <u>${radio.name}</u></h3>
                 
