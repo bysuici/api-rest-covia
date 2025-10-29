@@ -374,11 +374,11 @@ export const mergePDFs = async (pdfBuffers) => {
     return mergedPDFBuffer
 }
 
-export const generateGeneralReport = async (devicesData, groupId, groupName, deviceNames, realFrom, realTo, authorization, icon, color, isLetterhead) => {
+export const generateGeneralReport = async (devicesData, groupId, groupName, deviceNames, realFrom, realTo, authorization, icon, color, isLetterhead, deviceDependencies, dependencies) => {
     moment.locale('es')
 
     try {
-        const dependenciesMap = await analyzeDependencies(deviceNames, devicesData, groupId, groupName);
+        const dependenciesMap = await analyzeDependencies(deviceNames, devicesData, groupId, groupName, deviceDependencies, dependencies);
         const reportData = await buildReportStructureFromService(dependenciesMap, devicesData);
         const pdf = await generateGeneralPDF(reportData, groupName, realFrom, realTo, icon, color, isLetterhead);
         return pdf;
@@ -389,8 +389,12 @@ export const generateGeneralReport = async (devicesData, groupId, groupName, dev
     }
 };
 
-const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName) => {
+const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName, deviceDependencies, dependencies) => {
     const dependenciesMap = {};
+    const dependencyMap = {};
+    dependencies.forEach(dep => {
+        dependencyMap[dep.id] = dep.dependency;
+    });
 
     if (groupId !== 16) {
         dependenciesMap[groupName] = {
@@ -410,59 +414,33 @@ const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName)
         return dependenciesMap;
     }
 
-    const dependencyNames = {
-        'P': 'Policía Municipal',
-        'T': 'Tránsito',
-        'F': 'Fiscalización',
-        'C': 'C4 Celaya',
-        'U': 'Turística y Comercial',
-        'I': 'Infopol',
-        'G': 'Género',
-        'K': 'Canina',
-        'S': 'SSC (Seguridad Ciudadana)',
-        'V': 'Protección Civil'
-    };
-
     deviceNames.forEach((name, index) => {
         const deviceData = devicesData[index];
-        const parts = name.split('-');
-
-        if (parts.length >= 3) {
-            const areaCode = parts[1].charAt(0);
-            const vehicleType = parts[1].charAt(1);
-
-            const dependencyName = dependencyNames[areaCode] || 'Otros';
-            const typeLabel = vehicleType === 'M' ? 'Motos' : 'Vehiculo';
-
-            if (!dependenciesMap[dependencyName]) {
-                dependenciesMap[dependencyName] = {
-                    Motos: [],
-                    Vehiculo: []
-                };
-            }
-
-            dependenciesMap[dependencyName][typeLabel].push({
-                name,
-                deviceId: deviceData.deviceId,
-                deviceData
-            });
-        } else {
-            const dependencyName = 'Otros';
-            const typeLabel = 'Vehiculo';
-
-            if (!dependenciesMap[dependencyName]) {
-                dependenciesMap[dependencyName] = {
-                    Motos: [],
-                    Vehiculo: []
-                };
-            }
-
-            dependenciesMap[dependencyName][typeLabel].push({
-                name,
-                deviceId: deviceData.deviceId,
-                deviceData
-            });
+        const deviceDep = deviceDependencies.find(d => d.deviceId === deviceData.deviceId);
+        let dependencyName = groupName;
+        if (deviceDep && deviceDep.dependencyId) {
+            dependencyName = dependencyMap[deviceDep.dependencyId] || 'Sin Dependencia';
         }
+
+        const parts = name.split('-');
+        let typeLabel = 'Vehiculo';
+        if (parts.length >= 2) {
+            const vehicleCode = parts[1].charAt(1);
+            typeLabel = vehicleCode === 'M' ? 'Motos' : 'Vehiculo';
+        }
+
+        if (!dependenciesMap[dependencyName]) {
+            dependenciesMap[dependencyName] = {
+                Motos: [],
+                Vehiculo: []
+            };
+        }
+
+        dependenciesMap[dependencyName][typeLabel].push({
+            name,
+            deviceId: deviceData.deviceId,
+            deviceData
+        });
     });
 
     return dependenciesMap;
@@ -569,7 +547,7 @@ const buildReportStructureFromService = async (dependenciesMap, devicesData) => 
     return reportStructure;
 };
 
-const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon, color, isLetterhead) => {
+const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon, color, isLetterhead, deviceDependencies) => {
     const htmlPDF = new PuppeteerHTMLPDF();
     const options = {
         format: 'A4',

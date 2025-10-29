@@ -96,10 +96,12 @@ export const reportGeneral = async (request, response) => {
         isLetterhead,
         groupId,
         groupName,
-        deviceNames
+        deviceNames,
+        deviceDependencies,
+        dependencies
     } = request.body
 
-    if (!devices || devices.length == 0 || !from || from == '' || !to || to == '' || !authorization || authorization == '' || !realFrom || realFrom == '' || !realTo || realTo == '' || !groupId || !groupName || !deviceNames || deviceNames.length == 0) {
+    if (!devices || devices.length == 0 || !from || from == '' || !to || to == '' || !authorization || authorization == '' || !realFrom || realFrom == '' || !realTo || realTo == '' || !groupId || !groupName || !deviceNames || deviceNames.length == 0 || !deviceDependencies || deviceDependencies.length == 0 || !dependencies || dependencies.length == 0) {
         return response.status(400).json({
             error: true,
             msg: 'missing_fields_or_token',
@@ -111,7 +113,7 @@ export const reportGeneral = async (request, response) => {
         case true:
             try {
                 const devicesData = await getDevicesGeneral(devices, from, to, authorization, realFrom, realTo, deviceNames, groupId, groupName)
-                const generalReportPDF = await generateGeneralReport(devicesData.data, groupId, groupName, deviceNames, realFrom, realTo, authorization, icon, color, isLetterhead)
+                const generalReportPDF = await generateGeneralReport(devicesData.data, groupId, groupName, deviceNames, realFrom, realTo, authorization, icon, color, isLetterhead, deviceDependencies, dependencies)
                 const filename = `reporte-general-${groupName.replace(/\s+/g, '-').toLowerCase()}.pdf`
                 response.setHeader('Content-Type', 'application/pdf')
                 response.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
