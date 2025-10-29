@@ -396,27 +396,6 @@ const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName,
         dependencyMap[dep.id] = dep.dependency;
     });
 
-    if (groupId !== 16) {
-        dependenciesMap[groupName] = {
-            Motos: [],
-            Vehiculo: []
-        };
-
-        deviceNames.forEach((name, index) => {
-            const deviceData = devicesData[index];
-            const deviceDep = deviceDependencies.find(d => d.deviceId === deviceData.deviceId);
-            const typeLabel = deviceDep?.vehicleType || 'Vehiculo';
-            
-            dependenciesMap[groupName][typeLabel].push({
-                name,
-                deviceId: deviceData.deviceId,
-                deviceData
-            });
-        });
-
-        return dependenciesMap;
-    }
-
     deviceNames.forEach((name, index) => {
         const deviceData = devicesData[index];
         const deviceDep = deviceDependencies.find(d => d.deviceId === deviceData.deviceId);
