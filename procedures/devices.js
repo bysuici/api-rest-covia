@@ -39,7 +39,7 @@ export const getDevicesGeneral = async (devices, from, to, token, realFrom, real
     const configDevices = {
         method: 'post',
         maxBodyLength: Infinity,
-        url: 'https://api-covia.okip.com.mx/api/reports/generateGeneral',
+        url: `${process.env.DEVICES}/generateGeneral`,
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
