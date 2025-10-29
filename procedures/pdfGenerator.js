@@ -404,7 +404,10 @@ const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName,
 
         deviceNames.forEach((name, index) => {
             const deviceData = devicesData[index];
-            dependenciesMap[groupName].Vehiculo.push({
+            const deviceDep = deviceDependencies.find(d => d.deviceId === deviceData.deviceId);
+            const typeLabel = deviceDep?.vehicleType || 'Vehiculo';
+            
+            dependenciesMap[groupName][typeLabel].push({
                 name,
                 deviceId: deviceData.deviceId,
                 deviceData
@@ -419,15 +422,10 @@ const analyzeDependencies = async (deviceNames, devicesData, groupId, groupName,
         const deviceDep = deviceDependencies.find(d => d.deviceId === deviceData.deviceId);
         let dependencyName = groupName;
         if (deviceDep && deviceDep.dependencyId) {
-            dependencyName = dependencyMap[deviceDep.dependencyId] || 'Sin Dependencia';
+            dependencyName = dependencyMap[deviceDep.dependencyId] || groupName;
         }
 
-        const parts = name.split('-');
-        let typeLabel = 'Vehiculo';
-        if (parts.length >= 2) {
-            const vehicleCode = parts[1].charAt(1);
-            typeLabel = vehicleCode === 'M' ? 'Motos' : 'Vehiculo';
-        }
+        const typeLabel = deviceDep?.vehicleType || 'Vehiculo';
 
         if (!dependenciesMap[dependencyName]) {
             dependenciesMap[dependencyName] = {
