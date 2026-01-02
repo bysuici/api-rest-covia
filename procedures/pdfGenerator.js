@@ -59,7 +59,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             <h3 class="font-bold mb-4 mt-12 text-[15px]">Listado De Alertas:</h3>
             <table class="text-[13px]">
                 ${device.alerts.filter(alert => ![
-            'Persona peligrosidad baja',
+            'Persona peligrosidad baja con faltas administrativas',
             'Persona peligrosidad media',
             'Persona peligrosidad alta',
             'Reconocimiento de placa',
@@ -69,6 +69,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             'Alerta de geo-cercado',
             'Advertencia de colisión de peatones',
             'Alerta de cambios anormales de temperatura',
+            'Persona VIP ',
         ].includes(alert.category)).map(alert => `
                 <tr>
                     <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">${alert.category}</td>
