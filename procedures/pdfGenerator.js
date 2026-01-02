@@ -69,7 +69,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             'Alerta de geo-cercado',
             'Advertencia de colisión de peatones',
             'Alerta de cambios anormales de temperatura',
-            'Persona VIP ',
+            'Persona VIP',
         ].includes(alert.category)).map(alert => `
                 <tr>
                     <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">${alert.category}</td>
