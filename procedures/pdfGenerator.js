@@ -53,10 +53,258 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         `;
     };
 
+    const generateSpeedLineChartSection = () => {
+        if (!chart || !route || !device.speeds || device.speeds.length < 2) return ''; 
+
+        return `
+            <h3 class="font-bold my-2 text-[15px]">Historial de Velocidad:</h3>
+            <div id="speedLineChartDiv" class="w-full h-[350px]"></div>
+        `;
+    };
+
+    const generateSpeedLineChartScript = () => {
+        if (!chart || !route || !device.speeds || device.speeds.length === 0) return '';
+
+        const datesArray = device.routeDates || [];
+
+        return `
+            <script>
+                am5.ready(function() {
+                    // 1. Preparar datos
+                    var speeds = ${JSON.stringify(device.speeds)};
+                    var dates = ${JSON.stringify(datesArray)};
+                    var chartData = [];
+
+                    // Si no hay fechas, usamos índice numérico para que no falle
+                    var useIndex = dates.length === 0;
+
+                    for (var i = 0; i < speeds.length; i++) {
+                        if (speeds[i] !== undefined) {
+                            var dataPoint = { value: speeds[i] };
+                            
+                            if (useIndex) {
+                                // Fecha ficticia basada en índice si no hay fecha real
+                                dataPoint.date = new Date(2000, 0, 1, 0, 0, i).getTime(); 
+                            } else if (dates[i]) {
+                                dataPoint.date = new Date(dates[i]).getTime();
+                            }
+
+                            if (dataPoint.date) {
+                                chartData.push(dataPoint);
+                            }
+                        }
+                    }
+
+                    // Si después de procesar no hay datos, salir
+                    if (chartData.length < 2) return;
+
+                    // 2. Configurar Gráfica
+                    var root = am5.Root.new("speedLineChartDiv");
+                    
+                    // IMPORTANTE: NO USAR themes_Animated para PDF. 
+                    // Esto asegura que la gráfica esté lista inmediatamente.
+
+                    var chart = root.container.children.push(am5xy.XYChart.new(root, {
+                        panX: false, panY: false, wheelX: "none", wheelY: "none",
+                        layout: root.verticalLayout
+                    }));
+
+                    // 3. Ejes
+                    var xAxis = chart.xAxes.push(am5xy.DateAxis.new(root, {
+                        maxDeviation: 0.1,
+                        baseInterval: { timeUnit: "second", count: 1 },
+                        renderer: am5xy.AxisRendererX.new(root, { minGridDistance: 50 }),
+                        tooltip: am5.Tooltip.new(root, {})
+                    }));
+
+                    // Formato de fechas en eje X
+                    xAxis.get("dateFormats")["hour"] = "HH:mm";
+                    xAxis.get("dateFormats")["minute"] = "HH:mm";
+                    xAxis.get("dateFormats")["second"] = "HH:mm:ss";
+
+                    var yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
+                        renderer: am5xy.AxisRendererY.new(root, {}),
+                        min: 0
+                    }));
+                    
+                    yAxis.children.unshift(am5.Label.new(root, { 
+                        rotation: -90, text: "Velocidad (km/h)", y: am5.p50, centerX: am5.p50 
+                    }));
+
+                    // 4. Serie de Línea
+                    var series = chart.series.push(am5xy.LineSeries.new(root, {
+                        name: "Velocidad",
+                        xAxis: xAxis,
+                        yAxis: yAxis,
+                        valueYField: "value",
+                        valueXField: "date"
+                    }));
+
+                    series.strokes.template.setAll({ strokeWidth: 2, stroke: am5.color(0x${color.replace('#', '')}) });
+                    series.fills.template.setAll({ fillOpacity: 0.2, visible: true, fill: am5.color(0x${color.replace('#', '')}) });
+
+                    // 5. Cargar datos SIN ANIMACIÓN (Clave para que salga en el PDF)
+                    series.data.setAll(chartData);
+                    series.appear(0); 
+                    chart.appear(0, 0);
+                });
+            </script>
+        `;
+    };
+
+    const generateSpeedChartSection = () => {
+        if (!chart || !route) return '';
+        const hasSpeeds = device.speeds && device.speeds.length > 0;
+
+        return `
+            <h3 class="font-bold my-2 text-[15px]">Distribución de Velocidad:</h3>
+            ${hasSpeeds
+                ? '<div id="speedChartDiv" class="w-full h-[200px]"></div>'
+                : '<p class="text-[13px] h-[150px] flex items-center justify-center bg-gray-100 rounded">No hay datos de velocidad disponibles</p>'
+            }
+        `;
+    };
+
+    const generateSpeedChartScript = () => {
+        if (!chart || !route || !device.speeds || device.speeds.length === 0) return '';
+
+        return `
+            <script>
+                am5.ready(function() {
+                    var root = am5.Root.new("speedChartDiv");
+                    root.setThemes([ am5themes_Animated.new(root) ]);
+
+                    var chart = root.container.children.push(am5xy.XYChart.new(root, {
+                        panX: false,
+                        panY: false,
+                        wheelX: "none",
+                        wheelY: "none",
+                        layout: root.verticalLayout
+                    }));
+
+                    // --- Procesamiento de Datos de Velocidad ---
+                    var speeds = ${JSON.stringify(device.speeds)};
+                    
+                    // Definir rangos (puedes ajustar los límites aquí)
+                    var ranges = {
+                        "0 km/h (Detenido)": 0,
+                        "1-40 km/h (Urbano)": 0,
+                        "41-80 km/h (Avenida)": 0,
+                        "81-110 km/h (Carretera)": 0,
+                        "> 110 km/h (Exceso)": 0
+                    };
+
+                    // Clasificar velocidades
+                    speeds.forEach(function(s) {
+                        if (s <= 0) ranges["0 km/h (Detenido)"]++;
+                        else if (s <= 40) ranges["1-40 km/h (Urbano)"]++;
+                        else if (s <= 80) ranges["41-80 km/h (Avenida)"]++;
+                        else if (s <= 110) ranges["81-110 km/h (Carretera)"]++;
+                        else ranges["> 110 km/h (Exceso)"]++;
+                    });
+
+                    // Convertir a formato array para amCharts
+                    var data = Object.keys(ranges).map(function(key) {
+                        return { category: key, value: ranges[key] };
+                    });
+
+                    // --- Ejes ---
+                    var xRenderer = am5xy.AxisRendererX.new(root, { 
+                        minGridDistance: 30,
+                        cellStartLocation: 0.1,
+                        cellEndLocation: 0.9
+                    });
+                    
+                    xRenderer.labels.template.setAll({
+                        fontSize: 10,
+                        rotation: -15, // Ligera rotación si los textos son largos
+                        centerY: am5.percent(50),
+                        centerX: am5.percent(50)
+                    });
+
+                    var xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
+                        categoryField: "category",
+                        renderer: xRenderer,
+                        tooltip: am5.Tooltip.new(root, {})
+                    }));
+
+                    xAxis.data.setAll(data);
+
+                    var yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
+                        renderer: am5xy.AxisRendererY.new(root, {}),
+                        min: 0
+                    }));
+
+                    // --- Serie ---
+                    var series = chart.series.push(am5xy.ColumnSeries.new(root, {
+                        name: "Frecuencia",
+                        xAxis: xAxis,
+                        yAxis: yAxis,
+                        valueYField: "value",
+                        categoryXField: "category",
+                        tooltip: am5.Tooltip.new(root, {
+                            labelText: "{valueY} registros"
+                        })
+                    }));
+
+                    // Colores condicionales según el rango
+                    series.columns.template.adapters.add("fill", function(fill, target) {
+                        if (target.dataItem) {
+                            var category = target.dataItem.get("categoryX");
+                            if (category.includes("Detenido")) return am5.color(0x999999); // Gris
+                            if (category.includes("Exceso")) return am5.color(0xFF0000); // Rojo
+                            if (category.includes("Carretera")) return am5.color(0xFFA500); // Naranja
+                            return am5.color(0x${color.replace('#', '')}); // Color del tema para el resto
+                        }
+                        return fill;
+                    });
+
+                    series.columns.template.setAll({
+                        cornerRadiusTL: 5,
+                        cornerRadiusTR: 5,
+                        strokeOpacity: 0
+                    });
+
+                    // Etiqueta con valor arriba de la barra
+                    series.bullets.push(function () {
+                        return am5.Bullet.new(root, {
+                            locationY: 1,
+                            sprite: am5.Label.new(root, {
+                                text: "{valueY}",
+                                fill: root.interfaceColors.get("alternativeText"),
+                                centerY: 0,
+                                centerX: am5.percent(50),
+                                populateText: true,
+                                fontSize: 11
+                            })
+                        });
+                    });
+
+                    series.data.setAll(data);
+                    series.appear(1000);
+                    chart.appear(1000, 100);
+                });
+            </script>
+        `;
+    };
+
+    const generateHourlyChartSection = () => {
+        if (!chart) return '';
+        const hasRawAlerts = device.rawAlerts && device.rawAlerts.length > 0;
+
+        if (!hasRawAlerts) return '';
+
+        return `
+            <div class="h-10"></div>
+            <h3 class="font-bold my-2 text-[15px]">Frecuencia de Alertas por Hora:</h3>
+            <div id="hourlyChartDiv" class="w-full h-[200px]"></div>
+        `;
+    };
+
     const generateAlertsSection = () => {
         if (!includeAlerts) return '';
         return `
-            <h3 class="font-bold mb-4 mt-12 text-[15px]">Listado De Alertas:</h3>
+            <h3 class="font-bold mb-4 mt-16 text-[15px]">Listado De Alertas:</h3>
             <table class="text-[13px]">
                 ${device.alerts.filter(alert => ![
             'Persona peligrosidad baja con faltas administrativas',
@@ -176,6 +424,8 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             <script>
                 am5.ready(function() {
                     var root = am5.Root.new("chartdiv");
+                    
+                    root.setThemes([ am5themes_Animated.new(root) ]);
 
                     var customColorSet = am5.ColorSet.new(root, {
                         colors: [
@@ -237,6 +487,128 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         `;
     };
 
+    const generateHourlyChartScript = () => {
+        if (!chart || !device.rawAlerts || device.rawAlerts.length === 0) return '';
+
+        return `
+            <script>
+                am5.ready(function() {
+                    var root = am5.Root.new("hourlyChartDiv");
+
+                    // Temas
+                    root.setThemes([ am5themes_Animated.new(root) ]);
+
+                    var chart = root.container.children.push(am5xy.XYChart.new(root, {
+                        panX: false,
+                        panY: false,
+                        wheelX: "none",
+                        wheelY: "none",
+                        layout: root.verticalLayout
+                    }));
+
+                    // --- Procesar datos crudos ---
+                    var rawAlerts = ${JSON.stringify(device.rawAlerts)};
+                    var hourlyCounts = {};
+                    
+                    // Inicializar las 24 horas en 0
+                    for(var i=0; i<24; i++) {
+                        hourlyCounts[i] = 0;
+                    }
+
+                    // Contar alertas por hora
+                    rawAlerts.forEach(function(alert) {
+                        var date = new Date(alert.date);
+                        var hour = date.getHours();
+                        if (!isNaN(hour)) {
+                            hourlyCounts[hour]++;
+                        }
+                    });
+
+                    // Formatear para amCharts
+                    var data = [];
+                    for(var i=0; i<24; i++) {
+                        data.push({
+                            hour: i.toString() + ":00", // Etiqueta eje X
+                            value: hourlyCounts[i]      // Valor eje Y
+                        });
+                    }
+
+                    // --- Eje X (Categorías - Horas) ---
+                    var xRenderer = am5xy.AxisRendererX.new(root, { 
+                        minGridDistance: 30,
+                        cellStartLocation: 0.1,
+                        cellEndLocation: 0.9
+                    });
+
+                    xRenderer.labels.template.setAll({
+                        rotation: -45,
+                        centerY: am5.percent(50),
+                        centerX: am5.percent(100),
+                        fontSize: 10
+                    });
+
+                    var xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
+                        categoryField: "hour",
+                        renderer: xRenderer,
+                        tooltip: am5.Tooltip.new(root, {})
+                    }));
+
+                    xAxis.data.setAll(data);
+
+                    // --- Eje Y (Valores) ---
+                    var yRenderer = am5xy.AxisRendererY.new(root, {});
+                    var yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
+                        renderer: yRenderer,
+                        min: 0,
+                        maxPrecision: 0 // Solo enteros
+                    }));
+
+                    // --- Serie de Columnas ---
+                    var series = chart.series.push(am5xy.ColumnSeries.new(root, {
+                        name: "Alertas",
+                        xAxis: xAxis,
+                        yAxis: yAxis,
+                        valueYField: "value",
+                        categoryXField: "hour",
+                        tooltip: am5.Tooltip.new(root, {
+                            labelText: "{valueY}"
+                        })
+                    }));
+
+                    // Estilo de columnas (Usando el color principal del reporte)
+                    series.columns.template.setAll({
+                        tooltipY: 0,
+                        strokeOpacity: 0,
+                        cornerRadiusTL: 4,
+                        cornerRadiusTR: 4,
+                        fill: am5.color(0x${color.replace('#', '')}) 
+                    });
+
+                    // Etiquetas sobre las barras
+                    series.bullets.push(function () {
+                        return am5.Bullet.new(root, {
+                            locationY: 1,
+                            sprite: am5.Label.new(root, {
+                                text: "{valueY}",
+                                fill: root.interfaceColors.get("alternativeText"),
+                                centerY: 0,
+                                centerX: am5.percent(50),
+                                populateText: true,
+                                fontSize: 10
+                            })
+                        });
+                    });
+
+                    series.data.setAll(data);
+                    
+                    // Animación
+                    series.appear(1000);
+                    chart.appear(1000, 100);
+                });
+            </script>
+        `;
+    };
+
     const getRequiredStyles = () => {
         let leafletCSS = '';
         let mapStyles = '';
@@ -257,6 +629,21 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             #chartdiv {
                 width: 100%;
                 height: 500px;
+            }
+            #hourlyChartDiv {
+                width: 100%;
+                height: 275px; 
+                margin-bottom: 20px;
+            }
+            #speedChartDiv {
+                width: 100%;
+                height: 275px;
+                margin-bottom: 20px;
+            }
+            #speedLineChartDiv {
+                width: 100%;
+                height: 350px;
+                margin-bottom: 20px;
             }`;
         }
 
@@ -269,7 +656,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
     <!DOCTYPE html>
     <html>
     <head>
-        <title>OpenStreetMap Example</title>
+        <title>Reporte Vehicular</title>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         ${leafletCSS}
@@ -284,17 +671,16 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             
             body {
                 background-image: url(${isLetterhead ? 'https://res.cloudinary.com/dfvro9k4k/image/upload/v1757617598/okip_uma4qs.png' : ''});
-                background-size: 100% auto; /* Cambiado de 'cover' a '100% auto' */
-                background-position: top center; /* Cambiado de 'center' a 'top center' */
+                background-size: 100% auto;
+                background-position: top center;
                 background-repeat: repeat;
-                background-attachment: scroll; /* Cambiado de 'fixed' a 'scroll' */
-                height: auto; /* Cambiado de 'min-height: 100vh' a 'height: auto' */
-                padding-bottom: 0; /* Reducido de 80px a 0 */
+                background-attachment: scroll;
+                height: auto;
+                padding-bottom: 0;
                 position: relative;
                 margin: 0;
                 padding: 0;
             }
-            
             
             .footer {
                 position: fixed;
@@ -321,7 +707,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex flex-col gap-0">
                         <span class="text-[14px] font-bold underline">INFORME GENERAL</span>
-                        <span class="text-[11px]">Los parÃ¡metros utilizados para el presente informe corresponden del</span>
+                        <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
                         <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                     </div>
                     <div>
@@ -334,23 +720,32 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
                 
                 ${generateRouteSection()}
                 ${generateChartSection()}
+                ${generateHourlyChartSection()}
+                ${generateSpeedChartSection()}
+                ${generateSpeedLineChartSection()}
                 ${generateAlertsSection()}
                 ${generateSummarySection()}
             </div>
         </div>
 
-        <!-- Footer -->
         <div class="footer">
             OKIP "Inteligencia Mexicana al Servicio de la Nación"
         </div>
 
         ${route ? '<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>' : ''}
-        ${(chart && device.alerts.length > 0) ? '<script src="https://cdn.amcharts.com/lib/5/index.js"></script>' : ''}
-        ${(chart && device.alerts.length > 0) ? '<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>' : ''}
+        
+        ${(chart && (device.alerts.length > 0 || (device.speeds && device.speeds.length > 0))) ? `
+            <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+            <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
+            <script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+            <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script> 
+        ` : ''}
         
         ${generateMapScript()}
         ${generateChartScript()}
-    </body>
+        ${generateHourlyChartScript()}
+        ${generateSpeedChartScript()}
+        ${generateSpeedLineChartScript()} </body>
     </html>
     `
     const PDF = await htmlPDF.create(CONTENT)
@@ -377,13 +772,11 @@ export const mergePDFs = async (pdfBuffers) => {
 
 export const generateGeneralReport = async (devicesData, groupId, groupName, deviceNames, realFrom, realTo, authorization, icon, color, isLetterhead, deviceDependencies, dependencies) => {
     moment.locale('es')
-
     try {
         const dependenciesMap = await analyzeDependencies(deviceNames, devicesData, groupId, groupName, deviceDependencies, dependencies);
         const reportData = await buildReportStructureFromService(dependenciesMap, devicesData);
         const pdf = await generateGeneralPDF(reportData, groupName, realFrom, realTo, icon, color, isLetterhead);
         return pdf;
-
     } catch (error) {
         console.error('Error in generateGeneralReport:', error);
         throw new Error(`Error generating general report: ${error.message}`);
@@ -668,7 +1061,7 @@ const generateGeneralPDF = async (reportData, groupName, realFrom, realTo, icon,
                 background-color: ${color};
                 color: white;
                 text-align: center;
-                padding: 15px 0;
+                padding: 10px 0;
                 font-size: 14px;
                 font-weight: bold;
                 z-index: 1000;
@@ -920,7 +1313,7 @@ export const radioPdfGenerator = async (radio, from, to, isSatelite, reportSecti
         return `
             <h3 class="font-bold my-2 text-[15px]">Información del Radio:</h3>
             ${radio.radioInfo ? `
-                <table class="w-full text-[12px] mt-4" style="border-collapse: collapse;">
+                <table class="w-full text-[12px] my-4" style="border-collapse: collapse;">
                     <thead>
                         <tr style="background: ${color}; color: white;">
                             <th style="padding: 10px; text-align: left; border: 1px solid ${color}; font-weight: bold;">Parámetro</th>
