@@ -55,10 +55,8 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
 
     const generateAlertsSection = () => {
         if (!includeAlerts) return '';
-        return `
-            <h3 class="font-bold mb-4 mt-12 text-[15px]">Listado De Alertas:</h3>
-            <table class="text-[13px]">
-                ${device.alerts.filter(alert => ![
+
+        const filteredAlerts = device.alerts.filter(alert => ![
             'Persona peligrosidad baja con faltas administrativas',
             'Persona peligrosidad media',
             'Persona peligrosidad alta',
@@ -70,12 +68,23 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             'Advertencia de colisión de peatones',
             'Alerta de cambios anormales de temperatura',
             'Persona VIP',
-        ].includes(alert.category)).map(alert => `
+        ].includes(alert.category));
+
+        const totalAlerts = filteredAlerts.reduce((sum, alert) => sum + (Number(alert.value) || 0), 0);
+
+        return `
+            <h3 class="font-bold mb-4 mt-12 text-[15px]">Listado De Alertas:</h3>
+            <table class="text-[13px]">
+                ${filteredAlerts.map(alert => `
                 <tr>
                     <td style="padding: 5px 50px 5px 30px; background: #e4e4e4">${alert.category}</td>
                     <td style="padding: 5px 30px 5px 30px; background: #efefef; text-align: center;">${alert.value}</td>
                 </tr>
                 `).join('')}
+                <tr>
+                    <td style="padding: 5px 50px 5px 30px; background: #d4d4d4; font-weight: bold;">Total de alertas</td>
+                    <td style="padding: 5px 30px 5px 30px; background: #dfdfdf; text-align: center; font-weight: bold;">${totalAlerts}</td>
+                </tr>
             </table>
         `;
     };
@@ -88,7 +97,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
         };
 
         return `
-            <h3 class="font-bold mt-6 mb-4 text-[15px] text-[${color}]">Resumen de Combustible</h3> 
+            <h3 class="font-bold mt-4 mb-4 text-[15px] text-[${color}]">Resumen de Combustible</h3> 
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                     <thead>
                         <tr style="background: ${color}; color: white;">
