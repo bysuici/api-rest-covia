@@ -67,6 +67,9 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             'Alerta de geo-cercado',
             'Advertencia de colisión de peatones',
             'Alerta de cambios anormales de temperatura',
+            'Reconocimiento de placas de personal',
+            'Reconocimiento de placas no registradas',
+            'Detección de Movimiento',
             'Persona VIP',
         ].includes(alert.category));
 
