@@ -333,7 +333,7 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex flex-col gap-0">
                         <span class="text-[14px] font-bold underline">INFORME GENERAL</span>
-                        <span class="text-[11px]">Los parÃ¡metros utilizados para el presente informe corresponden del</span>
+                        <span class="text-[11px]">Los parámetros utilizados para el presente informe corresponden del</span>
                         <span class="text-[11px]"><u>${moment(from).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u> al <u>${moment(to).utcOffset(0).format('D [de] MMMM [del] YYYY, HH:mm:ss')}</u></span>
                     </div>
                     <div>
