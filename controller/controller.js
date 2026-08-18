@@ -1,3 +1,4 @@
+import { missionPdfGenerator } from '../procedures/missionPdfGenerator.js';
 import { pdfGenerator, mergePDFs, generateGeneralReport, radioPdfGenerator } from '../procedures/pdfGenerator.js'
 import { validateToken } from '../procedures/validateToken.js'
 import { getDevices, getDevicesGeneral } from '../procedures/devices.js'
@@ -237,3 +238,22 @@ export const getRadios = async (radios, from, to, authorization, reportSections)
         throw new Error(`Error fetching radio data: ${error.message}`);
     }
 }
+
+export const reportMision = async (request, response) => {
+    const { authorization } = request.headers;
+    const { mission, isSatelite, icon, color = '#2563eb', isLetterhead } = request.body;
+
+    if (!mission || !authorization) {
+        return response.status(400).json({ error: true, msg: 'missing_fields_or_token' });
+    }
+
+    try {
+        const pdf = await missionPdfGenerator(mission, isSatelite, icon, color, isLetterhead);
+        response.setHeader('Content-Type', 'application/pdf');
+        response.setHeader('Content-Disposition', 'attachment; filename="reporte-mision.pdf"');
+        response.status(200).send(pdf);
+    } catch (error) {
+        console.error('Error generando reporte mision:', error);
+        response.status(500).json({ error: true, msg: 'pdf_not_created', details: error.message });
+    }
+};
