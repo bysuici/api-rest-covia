@@ -40,10 +40,28 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
         return text;
     };
 
+
+    const getLogTypeInfo = (type) => {
+        switch (type) {
+            case 'CREATED': return { text: 'CREADA', color: '#3b82f6' };
+            case 'ALERT_RECEIVED': return { text: 'ALERTA RECIBIDA', color: '#f0d909ff' };
+            case 'ACCEPTED': return { text: 'ACEPTADA', color: '#10b981' };
+            case 'REJECTED': return { text: 'RECHAZADA', color: '#8b0000' };
+            case 'ARRIVED': return { text: 'EN LUGAR', color: '#f96d16ff' };
+            case 'FINISHED': return { text: 'FINALIZADA', color: '#000000' };
+            default: return { text: type, color: '#6b7280' };
+        }
+    };
+
     const logsHtml = (mission.logs || []).map(log => `
         <tr>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #4b5563;">${moment(log.date).format('DD/MM/YYYY HH:mm:ss')}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; font-weight: bold; color: #1f2937;">${log.type}</td>
+            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; font-weight: bold; color: #1f2937;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${getLogTypeInfo(log.type).color};"></span>
+                    <span>${getLogTypeInfo(log.type).text}</span>
+                </div>
+            </td>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #4b5563;">${formatLogDescription(log.description)}</td>
         </tr>
     `).join('') || '<tr><td colspan="3" style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; text-align: center; color: #6b7280;">Sin registros en bitácora</td></tr>';
@@ -86,25 +104,29 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
                 }
             });
 
-            const getEventColor = (type) => {
+            const getEventColorHex = (type) => {
                 switch(type) {
-                    case 'ACCEPTED': return 'orange';
-                    case 'ARRIVED': return 'yellow';
-                    case 'FINISHED': return 'black';
-                    case 'CANCELLED': return 'grey';
-                    default: return 'blue';
+                    case 'CREATED': return '#3b82f6';
+                    case 'ALERT_RECEIVED': return '#ffd91aff';
+                    case 'ACCEPTED': return '#10b981';
+                    case 'REJECTED': return '#8b0000';
+                    case 'ARRIVED': return '#f97316';
+                    case 'FINISHED': return '#000000';
+                    default: return '#6b7280';
                 }
             };
 
             logsData.forEach(log => {
                 if (log.description && log.description.location && log.description.location.lat && log.description.location.lng) {
-                    const color = getEventColor(log.type);
-                    const evtIcon = L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + color + '.png',
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                        iconSize: [20, 32], iconAnchor: [10, 32], shadowSize: [32, 32]
-                    });
-                    const marker = L.marker([log.description.location.lat, log.description.location.lng], {icon: evtIcon}).addTo(map);
+                    const color = getEventColorHex(log.type);
+                    const marker = L.circleMarker([log.description.location.lat, log.description.location.lng], {
+                        radius: 8,
+                        fillColor: color,
+                        color: 'white',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 1
+                    }).addTo(map);
                     bounds.extend([log.description.location.lat, log.description.location.lng]);
                 }
             });
