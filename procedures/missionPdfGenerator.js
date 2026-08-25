@@ -13,10 +13,22 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
     };
     htmlPDF.setOptions(options);
 
+    const getUnitStatusText = (status) => {
+        if (!status) return 'Desconocido';
+        switch (status.toUpperCase()) {
+            case 'ASSIGNED': return 'ASIGNADA';
+            case 'ACCEPTED': return 'ACEPTADA';
+            case 'REJECTED': return 'RECHAZADA';
+            case 'ARRIVED': return 'EN LUGAR';
+            case 'FINISHED': return 'FINALIZADA';
+            default: return status;
+        }
+    };
+
     const unitsHtml = (mission.unitsWithRoutes || []).map(u => `
         <tr>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; font-weight: 500;">${u.alias || u.name}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${u.status || 'Desconocido'}</td>
+            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${getUnitStatusText(u.status)}</td>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${moment(u.assigned_at).format('DD/MM/YYYY HH:mm')}</td>
         </tr>
     `).join('') || '<tr><td colspan="3" style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; text-align: center; color: #6b7280;">Sin unidades asignadas</td></tr>';
@@ -49,6 +61,7 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
             case 'REJECTED': return { text: 'RECHAZADA', color: '#8b0000' };
             case 'ARRIVED': return { text: 'EN LUGAR', color: '#f96d16ff' };
             case 'FINISHED': return { text: 'FINALIZADA', color: '#000000' };
+            case 'ASSIGN': return { text: 'ASIGNADO', color: '#06b6d4' };
             default: return { text: type, color: '#6b7280' };
         }
     };
@@ -112,6 +125,7 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
                     case 'REJECTED': return '#8b0000';
                     case 'ARRIVED': return '#f97316';
                     case 'FINISHED': return '#000000';
+                    case 'ASSIGN': return '#06b6d4';
                     default: return '#6b7280';
                 }
             };
