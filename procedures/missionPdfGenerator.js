@@ -25,11 +25,39 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
         }
     };
 
+    const getUnitDate = (u) => {
+        let bestDate = null;
+        if (mission.logs && Array.isArray(mission.logs)) {
+            const statusMap = { 'ASSIGNED': 'ASSIGN', 'ACCEPTED': 'ACCEPTED', 'REJECTED': 'REJECTED', 'ARRIVED': 'ARRIVED', 'FINISHED': 'FINISHED' };
+            const targetType = statusMap[u.status?.toUpperCase()] || u.status?.toUpperCase();
+            
+            const sortedLogs = [...mission.logs].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const matchingLog = sortedLogs.find(l => {
+                if (l.type !== targetType) return false;
+                let parsed = l.description;
+                if (typeof parsed === 'string') {
+                    try { parsed = JSON.parse(parsed); } catch(e) {}
+                }
+                if (parsed && typeof parsed === 'object') {
+                    const logDeviceId = parsed.device_id || parsed.id_device || parsed.deviceId;
+                    const unitId = u.id_device || u.device_id || u.id;
+                    if (logDeviceId && unitId && String(logDeviceId) === String(unitId)) return true;
+                }
+                return true; // fallback if no explicit device match
+            });
+            
+            if (matchingLog) bestDate = matchingLog.date || matchingLog.timestamp;
+        }
+        
+        if (!bestDate) bestDate = u.updated_at || u.assigned_at;
+        return bestDate ? moment(bestDate).format('DD/MM/YYYY HH:mm') : '-';
+    };
+
     const unitsHtml = (mission.unitsWithRoutes || []).map(u => `
         <tr>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; font-weight: 500;">${u.alias || u.name}</td>
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${getUnitStatusText(u.status)}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${moment(u.assigned_at).format('DD/MM/YYYY HH:mm')}</td>
+            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${getUnitDate(u)}</td>
         </tr>
     `).join('') || '<tr><td colspan="3" style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; text-align: center; color: #6b7280;">Sin unidades asignadas</td></tr>';
 
@@ -86,6 +114,72 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #4b5563;">${msg.message || msg.text || '-'}</td>
         </tr>
     `).join('') || '<tr><td colspan="3" style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; text-align: center; color: #6b7280;">Sin mensajes de chat</td></tr>';
+
+    // Parse relevant data safely
+    let relData = null;
+    try {
+        relData = typeof mission.relevant_data === 'string' ? JSON.parse(mission.relevant_data) : mission.relevant_data;
+    } catch (e) { }
+
+    let finalizationHtml = '';
+    if (mission.conclusion_status || mission.conclusion_notes || relData) {
+        let relDataHtml = '';
+        if (relData && Object.keys(relData).length > 0) {
+            let items = [];
+            if (relData.detenidos) items.push(`<span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm"><strong class="text-slate-900">Detenidos:</strong> ${relData.detenidos}</span>`);
+            if (relData.heridos) items.push(`<span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm"><strong class="text-slate-900">Heridos:</strong> ${relData.heridos}</span>`);
+            if (relData.vehiculos_asegurados) items.push(`<span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm"><strong class="text-slate-900">Vehículos asegurados:</strong> ${relData.vehiculos_asegurados}</span>`);
+            if (relData.armas_aseguradas) items.push(`<span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm"><strong class="text-slate-900">Armas aseguradas:</strong> ${relData.armas_aseguradas.cantidad || 'Sí'} <span class="text-slate-500">(${relData.armas_aseguradas.tipo || 'N/A'})</span></span>`);
+            if (relData.droga_asegurada) items.push(`<span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm"><strong class="text-slate-900">Droga asegurada:</strong> ${relData.droga_asegurada.cantidad || 'Sí'} <span class="text-slate-500">(${relData.droga_asegurada.tipo || 'N/A'})</span></span>`);
+            if (relData.apoyo_extra) items.push(`<span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm"><strong class="text-slate-900">Apoyo extra:</strong> ${relData.apoyo_extra}</span>`);
+            if (relData.faltas_civicas) items.push(`<span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm"><strong class="text-slate-900">Faltas Cívicas:</strong> ${relData.faltas_civicas}</span>`);
+            if (relData.otros) items.push(`<span class="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm"><strong class="text-slate-900">${relData.otros.categoria || 'Otros'}:</strong> ${relData.otros.informacion || 'Sí'}</span>`);
+
+            if (items.length === 0) items.push('<span class="text-xs text-slate-500 italic">Ningún dato relevante capturado.</span>');
+
+            relDataHtml = `
+                <div class="mt-4">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Datos Relevantes Reportados</span>
+                    <div class="flex flex-wrap gap-2">
+                        ${items.join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        let notesHtml = '';
+        if (mission.conclusion_notes) {
+            notesHtml = `
+                <div class="mt-4">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Notas Finales del Operador</span>
+                    <div class="text-sm font-medium text-slate-700 leading-relaxed bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                        ${mission.conclusion_notes}
+                    </div>
+                </div>
+            `;
+        }
+
+        finalizationHtml = `
+            <h2 class="text-lg font-bold mt-8 mb-4 text-[#2563eb]">Finalización del Servicio</h2>
+            <div class="rounded-xl border border-slate-200 overflow-hidden shadow-sm mb-10 bg-slate-50 p-6 break-inside-avoid">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wide">
+                        <svg class="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        Detalles de Finalización
+                    </h2>
+                    ${mission.conclusion_status ? `
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado:</span>
+                        <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">
+                            ${mission.conclusion_status}
+                        </span>
+                    </div>` : ''}
+                </div>
+                ${relDataHtml}
+                ${notesHtml}
+            </div>
+        `;
+    }
 
     const generateMapScript = () => {
         let mapDataStr = JSON.stringify(mission.unitsWithRoutes || []);
@@ -258,28 +352,19 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
                 </div>
             </div>
 
-            <!-- MAP -->
-            <h2 class="text-lg font-bold mt-8 mb-4 text-[#2563eb]">Ruta Recorrida</h2>
-            <div id="map" class="w-full h-[380px] bg-gray-200 rounded-xl border border-gray-300 shadow-sm relative z-0 mb-8"></div>
+            ${finalizationHtml}
 
-            <!-- UNITS -->
-            <h2 class="text-lg font-bold mt-16 mb-4 pt-6 text-[#2563eb]">Unidades Asignadas</h2>
-            <div class="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <table class="w-full text-left bg-white">
-                    <thead class="bg-[#2563eb] text-white">
-                        <tr>
-                            <th class="p-3 text-xs font-bold tracking-wider w-1/3">Unidad</th>
-                            <th class="p-3 text-xs font-bold tracking-wider w-1/3">Estado</th>
-                            <th class="p-3 text-xs font-bold tracking-wider w-1/3">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody>${unitsHtml}</tbody>
-                </table>
+            <!-- MAP -->
+            <div class="break-inside-avoid w-full pt-6">
+                <h2 class="text-lg font-bold mt-8 mb-4 text-[#2563eb]">Ruta Recorrida</h2>
+                <div id="map" class="w-full h-[380px] bg-gray-200 rounded-xl border border-gray-300 shadow-sm relative z-0 mb-8"></div>
             </div>
+
+
         </div>
 
         <!-- PAGE 2 -->
-        <div class="mx-6 my-6 bg-white p-8 rounded-xl shadow-md border border-slate-200 break-inside-avoid">
+        <div class="mx-6 my-6 bg-white p-8 rounded-xl shadow-md border border-slate-200">
             <h2 class="text-lg font-bold mb-4 text-[#2563eb]">Bitácora de Despacho</h2>
             <div class="rounded-xl border border-slate-200 overflow-hidden shadow-sm mb-10">
                 <table class="w-full text-left bg-white">
@@ -291,6 +376,21 @@ export const missionPdfGenerator = async (mission, isSatelite, icon, color, isLe
                         </tr>
                     </thead>
                     <tbody>${logsHtml}</tbody>
+                </table>
+            </div>
+
+            <!-- UNITS -->
+            <h2 class="text-lg font-bold mb-4 text-[#2563eb]">Unidades Asignadas</h2>
+            <div class="rounded-xl border border-slate-200 overflow-hidden shadow-sm mb-10">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-[#2563eb] text-white">
+                        <tr>
+                            <th class="p-3 text-xs font-bold tracking-wider w-1/3">Unidad</th>
+                            <th class="p-3 text-xs font-bold tracking-wider w-1/3">Estado</th>
+                            <th class="p-3 text-xs font-bold tracking-wider w-1/3">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>${unitsHtml}</tbody>
                 </table>
             </div>
 
