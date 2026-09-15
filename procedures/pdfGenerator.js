@@ -71,6 +71,8 @@ export const pdfGenerator = async (device, from, to, isSatelite, reportSections 
             'Reconocimiento de placas no registradas',
             'Detección de Movimiento',
             'Persona VIP',
+            'Reconocomiento de placas robadas',
+            'Placa Recurrente',
         ].includes(alert.category));
 
         const totalAlerts = filteredAlerts.reduce((sum, alert) => sum + (Number(alert.value) || 0), 0);
